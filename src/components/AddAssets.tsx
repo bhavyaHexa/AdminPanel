@@ -1,15 +1,11 @@
 import React, { useState } from 'react';
-import useGetAllModels from '../hooks/useGetAllModels';
 import useGetAllCollections from '../hooks/useGetAllCollections';
-import usePostAssests from '../hooks/usePostAssests';
 import { useUploadAsset3DGlb } from '../hooks/useUploadAsset3DGlb';
 import type { Width, Asset3D } from '../types';
 
 const AddAssets: React.FC = () => {
-  const { data: models = [] } = useGetAllModels();
   const { data: collections = [] } = useGetAllCollections();
   
-  const createAsset = usePostAssests();
   const uploadGlb = useUploadAsset3DGlb();
 
   // Form State

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import useGetAllModels from '../hooks/useGetAllModels';
 import useGetAllCollections from '../hooks/useGetAllCollections';
 import usePostWidths from '../hooks/usePostWidths';
 import { useUpdateWidth } from '../hooks/useUpdateWidth';
@@ -7,7 +6,6 @@ import { useDeleteWidth } from '../hooks/useDeleteWidth';
 import type { Width, Color } from '../types';
 
 const AddWidths: React.FC = () => {
-  const { data: models = [] } = useGetAllModels();
   const { data: collections = [] } = useGetAllCollections();
   
   const createWidth = usePostWidths();

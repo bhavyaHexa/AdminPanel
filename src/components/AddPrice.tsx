@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import useGetAllModels from '../hooks/useGetAllModels';
 import useGetAllCollections from '../hooks/useGetAllCollections';
 import usePostPrices from '../hooks/usePostPrices';
 import { useUpdatePriceList } from '../hooks/useUpdatePriceList';
@@ -7,7 +6,6 @@ import { useDeletePriceList } from '../hooks/useDeletePriceList';
 import type { Width, PriceList } from '../types';
 
 const AddPrice: React.FC = () => {
-  const { data: models = [] } = useGetAllModels();
   const { data: collections = [] } = useGetAllCollections();
 
   const createPrice = usePostPrices();

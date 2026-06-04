@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import useGetAllModels from '../hooks/useGetAllModels';
 import useGetAllCollections from '../hooks/useGetAllCollections';
 import usePostTextures from '../hooks/usePostTextures';
 import { useUploadTextureAoGold } from '../hooks/useUploadTextureAoGold';
@@ -8,7 +7,6 @@ import { useUploadTextureAoEngrave } from '../hooks/useUploadTextureAoEngrave';
 import type { Width, Texture } from '../types';
 
 const AddTextures: React.FC = () => {
-  const { data: models = [] } = useGetAllModels();
   const { data: collections = [] } = useGetAllCollections();
 
   const createTexture = usePostTextures();
