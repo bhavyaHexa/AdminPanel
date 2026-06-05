@@ -42,4 +42,6 @@ export const API_ROUTES = {
   UPLOAD_TEXTURE_AO_GOLD: (id: string) => `/textures/${id}/upload/ao-gold`,
   UPLOAD_TEXTURE_AO_SILVER: (id: string) => `/textures/${id}/upload/ao-silver`,
   UPLOAD_TEXTURE_AO_ENGRAVE: (id: string) => `/textures/${id}/upload/ao-engrave`,
+  UPLOAD_TEXTURE_NORMAL_BASE: (id: string) => `/textures/${id}/upload/normal-base`,
+  UPLOAD_TEXTURE_NORMAL_FINISHING: (id: string) => `/textures/${id}/upload/normal-finishing`,
 };

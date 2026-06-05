@@ -4,26 +4,43 @@ import usePostTextures from '../hooks/usePostTextures';
 import { useUploadTextureAoGold } from '../hooks/useUploadTextureAoGold';
 import { useUploadTextureAoSilver } from '../hooks/useUploadTextureAoSilver';
 import { useUploadTextureAoEngrave } from '../hooks/useUploadTextureAoEngrave';
+import { useUploadTextureNormalBase } from '../hooks/useUploadTextureNormalBase';
+import { useUploadTextureNormalFinishing } from '../hooks/useUploadTextureNormalFinishing';
+import { useUpdateTexture } from '../hooks/useUpdateTexture';
+import { useDeleteTexture } from '../hooks/useDeleteTexture';
 import type { Width, Texture } from '../types';
 
 const AddTextures: React.FC = () => {
   const { data: collections = [] } = useGetAllCollections();
 
   const createTexture = usePostTextures();
+  const updateTexture = useUpdateTexture();
+  const deleteTexture = useDeleteTexture();
   const uploadGold = useUploadTextureAoGold();
   const uploadSilver = useUploadTextureAoSilver();
   const uploadEngrave = useUploadTextureAoEngrave();
+  const uploadNormalBase = useUploadTextureNormalBase();
+  const uploadNormalFinishing = useUploadTextureNormalFinishing();
 
   // Form State
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedCollectionId, setSelectedCollectionId] = useState('');
+  const [selectedModelId, setSelectedModelId] = useState('');
+  const [selectedColorId, setSelectedColorId] = useState('');
   const [widthId, setWidthId] = useState('');
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Filter State
+  const [filterCollectionId, setFilterCollectionId] = useState('');
+  const [filterModelId, setFilterModelId] = useState('');
+  const [filterColorId, setFilterColorId] = useState('');
 
   const showStatus = (text: string, type: 'success' | 'error' = 'success') => {
     setStatusMsg({ type, text });
     setTimeout(() => setStatusMsg(null), 4000);
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!widthId) {
       showStatus('Please select a Width Option', 'error');
@@ -31,15 +48,72 @@ const AddTextures: React.FC = () => {
     }
 
     try {
-      await createTexture.mutateAsync({ widthId });
-      showStatus('Texture container created successfully! You can now upload maps.');
-      setWidthId('');
+      if (editingId) {
+        await updateTexture.mutateAsync({ id: editingId, data: { widthId } });
+        showStatus('Texture container updated successfully!');
+      } else {
+        await createTexture.mutateAsync({ widthId });
+        showStatus('Texture container created successfully! You can now upload maps.');
+      }
+      handleCancel();
     } catch (err: unknown) {
       showStatus(String(err), 'error');
     }
   };
 
-  const handleMapUpload = async (textureId: string, file: File, type: 'gold' | 'silver' | 'engrave') => {
+  const handleEdit = (texture: Texture) => {
+    if (!texture.id) return;
+    setEditingId(texture.id);
+    setWidthId(texture.widthId);
+
+    // Find parent color, model, and collection for this widthId
+    let foundCollectionId = '';
+    let foundModelId = '';
+    let foundColorId = '';
+    collections.forEach((collection) => {
+      if (collection.models && Array.isArray(collection.models)) {
+        collection.models.forEach((model) => {
+          if (model.colors && Array.isArray(model.colors)) {
+            model.colors.forEach((color) => {
+              if (color.widths && Array.isArray(color.widths)) {
+                if (color.widths.some((w) => w.id === texture.widthId)) {
+                  foundCollectionId = collection.id || '';
+                  foundModelId = model.id || '';
+                  foundColorId = color.id || '';
+                }
+              }
+            });
+          }
+        });
+      }
+    });
+    setSelectedCollectionId(foundCollectionId);
+    setSelectedModelId(foundModelId);
+    setSelectedColorId(foundColorId);
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setWidthId('');
+    setSelectedCollectionId('');
+    setSelectedModelId('');
+    setSelectedColorId('');
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this texture configuration? All uploaded maps will be lost.')) return;
+    try {
+      await deleteTexture.mutateAsync(id);
+      showStatus('Texture configuration deleted successfully!');
+      if (editingId === id) {
+        handleCancel();
+      }
+    } catch (err: unknown) {
+      showStatus(String(err), 'error');
+    }
+  };
+
+  const handleMapUpload = async (textureId: string, file: File, type: 'gold' | 'silver' | 'engrave' | 'normalBase' | 'normalFinishing') => {
     const formData = new FormData();
     formData.append('file', file);
 
@@ -50,9 +124,15 @@ const AddTextures: React.FC = () => {
       } else if (type === 'silver') {
         await uploadSilver.mutateAsync({ id: textureId, formData });
         showStatus('Silver Ambient Occlusion map uploaded successfully!');
-      } else {
+      } else if (type === 'engrave') {
         await uploadEngrave.mutateAsync({ id: textureId, formData });
         showStatus('Engrave Ambient Occlusion map uploaded successfully!');
+      } else if (type === 'normalBase') {
+        await uploadNormalBase.mutateAsync({ id: textureId, formData });
+        showStatus('Normal Base map uploaded successfully!');
+      } else {
+        await uploadNormalFinishing.mutateAsync({ id: textureId, formData });
+        showStatus('Normal Finishing map uploaded successfully!');
       }
     } catch (err: unknown) {
       showStatus(`Texture upload failed: ${String(err)}`, 'error');
@@ -61,7 +141,16 @@ const AddTextures: React.FC = () => {
 
   // Flatten options for selection and listing
   const widthsList: { width: Width; colorName: string; modelName: string; collectionName: string }[] = [];
-  const texturesList: { texture: Texture; widthValue: string; colorName: string; modelName: string }[] = [];
+  const texturesList: {
+    texture: Texture;
+    widthValue: string;
+    colorName: string;
+    colorId: string;
+    modelName: string;
+    modelId: string;
+    collectionName: string;
+    collectionId: string;
+  }[] = [];
 
   collections.forEach((collection) => {
     if (collection.models && Array.isArray(collection.models)) {
@@ -70,8 +159,9 @@ const AddTextures: React.FC = () => {
           model.colors.forEach((color) => {
             if (color.widths && Array.isArray(color.widths)) {
               color.widths.forEach((width) => {
-                // Only suggest widths that do NOT already have textures configured
-                if (!width.texture) {
+                // Only suggest widths that do NOT already have textures configured,
+                // or if we are editing, allow keeping the currently linked width.
+                if (!width.texture || (editingId && width.texture.id === editingId)) {
                   widthsList.push({ width, colorName: color.name, modelName: model.name, collectionName: collection.name });
                 }
                 if (width.texture) {
@@ -79,7 +169,11 @@ const AddTextures: React.FC = () => {
                     texture: width.texture,
                     widthValue: width.value,
                     colorName: color.name,
+                    colorId: color.id || '',
                     modelName: model.name,
+                    modelId: model.id || '',
+                    collectionName: collection.name,
+                    collectionId: collection.id || '',
                   });
                 }
               });
@@ -88,6 +182,34 @@ const AddTextures: React.FC = () => {
         }
       });
     }
+  });
+
+  // Derived options based on granular selection for filters
+  const filterCollection = collections.find((c) => c.id === filterCollectionId);
+  const filterModelOptions = filterCollection?.models || [];
+  const filterModel = filterModelOptions.find((m) => m.id === filterModelId);
+  const filterColorOptions = filterModel?.colors || [];
+
+  // Derived options for Form Panel (Link Texture Container)
+  const formCollection = collections.find((c) => c.id === selectedCollectionId);
+  const formModelOptions = formCollection?.models || [];
+  const formModel = formModelOptions.find((m) => m.id === selectedModelId);
+  const formColorOptions = formModel?.colors || [];
+  const formColor = formColorOptions.find((c) => c.id === selectedColorId);
+  const formWidthOptions = formColor?.widths || [];
+
+  // Filter the form widths option list so we only show widths that do not have textures configured
+  // (or if editing, allow the currently linked width)
+  const availableFormWidths = formWidthOptions.filter((width) => {
+    return !width.texture || (editingId && width.texture.id === editingId);
+  });
+
+  // Filter textures
+  const filteredTextures = texturesList.filter((item) => {
+    const matchesCollection = filterCollectionId ? item.collectionId === filterCollectionId : true;
+    const matchesModel = filterModelId ? item.modelId === filterModelId : true;
+    const matchesColor = filterColorId ? item.colorId === filterColorId : true;
+    return matchesCollection && matchesModel && matchesColor;
   });
 
   return (
@@ -116,32 +238,103 @@ const AddTextures: React.FC = () => {
       <div className="dashboard-grid">
         {/* Form Panel */}
         <div className="card-panel">
-          <h2 className="card-title">Link Texture Container</h2>
-          <form onSubmit={handleCreate}>
+          <h2 className="card-title">{editingId ? 'Edit Texture Container' : 'Link Texture Container'}</h2>
+          <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label className="form-label">Select Width (No textures yet)</label>
+              <label className="form-label">Collection</label>
+              <select
+                className="form-select"
+                value={selectedCollectionId}
+                onChange={(e) => {
+                  setSelectedCollectionId(e.target.value);
+                  setSelectedModelId('');
+                  setSelectedColorId('');
+                  setWidthId('');
+                }}
+                required
+              >
+                <option value="">-- Select Collection --</option>
+                {collections.map((coll) => (
+                  <option key={coll.id} value={coll.id}>
+                    {coll.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Model</label>
+              <select
+                className="form-select"
+                value={selectedModelId}
+                onChange={(e) => {
+                  setSelectedModelId(e.target.value);
+                  setSelectedColorId('');
+                  setWidthId('');
+                }}
+                disabled={!selectedCollectionId}
+                required
+              >
+                <option value="">-- Select Model --</option>
+                {formModelOptions.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Color Variant</label>
+              <select
+                className="form-select"
+                value={selectedColorId}
+                onChange={(e) => {
+                  setSelectedColorId(e.target.value);
+                  setWidthId('');
+                }}
+                disabled={!selectedModelId}
+                required
+              >
+                <option value="">-- Select Color --</option>
+                {formColorOptions.map((color) => (
+                  <option key={color.id} value={color.id}>
+                    {color.name} ({color.sku})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Width Option</label>
               <select
                 className="form-select"
                 value={widthId}
                 onChange={(e) => setWidthId(e.target.value)}
+                disabled={!selectedColorId}
                 required
               >
                 <option value="">-- Select Width Option --</option>
-                {widthsList.map(({ width, colorName, modelName, collectionName }) => (
+                {availableFormWidths.map((width) => (
                   <option key={width.id} value={width.id}>
-                    Width {width.value}mm ({colorName} • Model {modelName} • {collectionName})
+                    Width {width.value}mm {width.texture ? '(Already configured)' : ''}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="btn-group">
+              {editingId && (
+                <button type="button" className="btn btn-ghost" onClick={handleCancel}>
+                  Cancel
+                </button>
+              )}
               <button
                 type="submit"
                 className="btn btn-primary"
-                disabled={createTexture.isPending}
+                disabled={createTexture.isPending || updateTexture.isPending}
               >
-                Create Texture Config
+                {editingId ? 'Save Changes' : 'Create Texture Config'}
               </button>
             </div>
           </form>
@@ -149,22 +342,111 @@ const AddTextures: React.FC = () => {
 
         {/* List Panel */}
         <div className="card-panel">
+          {/* Filter Controls */}
+          <div className="card-panel" style={{ marginBottom: '1.5rem' }}>
+            <h2 className="card-title" style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Filter Textures</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Collection</label>
+                <select
+                  className="form-select"
+                  value={filterCollectionId}
+                  onChange={(e) => {
+                    setFilterCollectionId(e.target.value);
+                    setFilterModelId('');
+                    setFilterColorId('');
+                  }}
+                >
+                  <option value="">-- All Collections --</option>
+                  {collections.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Model</label>
+                <select
+                  className="form-select"
+                  value={filterModelId}
+                  onChange={(e) => {
+                    setFilterModelId(e.target.value);
+                    setFilterColorId('');
+                  }}
+                  disabled={!filterCollectionId}
+                >
+                  <option value="">-- All Models --</option>
+                  {filterModelOptions.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Color</label>
+                <select
+                  className="form-select"
+                  value={filterColorId}
+                  onChange={(e) => setFilterColorId(e.target.value)}
+                  disabled={!filterModelId}
+                >
+                  <option value="">-- All Colors --</option>
+                  {filterColorOptions.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
           <h2 className="card-title">Configured Ambient Occlusion Maps</h2>
-          {texturesList.length === 0 ? (
-            <div className="empty-state">No texture configurations found. Link one to get started.</div>
+          {filteredTextures.length === 0 ? (
+            <div className="empty-state">
+              {texturesList.length === 0
+                ? 'No texture configurations found. Link one to get started.'
+                : 'No texture configurations match the selected filters.'}
+            </div>
           ) : (
             <div className="list-container">
-              {texturesList.map(({ texture, widthValue, colorName, modelName }) => (
+              {filteredTextures.map(({ texture, widthValue, colorName, modelName }) => (
                 <div key={texture.id} className="list-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-                    <div className="list-item-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', fontSize: '1.5rem' }}>
-                      🗺️
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div className="list-item-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', fontSize: '1.5rem' }}>
+                        🗺️
+                      </div>
+                      <div>
+                        <h3 className="list-item-title">Texture Maps Config</h3>
+                        <p className="list-item-subtitle" style={{ fontSize: '0.75rem' }}>
+                          Model: {modelName} • Width: <strong style={{ color: '#10b981' }}>{widthValue}mm</strong> ({colorName})
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="list-item-title">Texture Maps Config</h3>
-                      <p className="list-item-subtitle" style={{ fontSize: '0.75rem' }}>
-                        Model: {modelName} • Width: <strong style={{ color: '#10b981' }}>{widthValue}mm</strong> ({colorName})
-                      </p>
+
+                    <div className="list-item-actions" style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        className="btn btn-ghost"
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                        onClick={() => handleEdit(texture)}
+                      >
+                        Edit
+                      </button>
+                      {texture.id && (
+                        <button
+                          className="btn btn-danger-outline"
+                          style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                          onClick={() => handleDelete(texture.id!)}
+                          disabled={deleteTexture.isPending}
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -222,6 +504,44 @@ const AddTextures: React.FC = () => {
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file && texture.id) handleMapUpload(texture.id, file, 'engrave');
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Normal Base */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '0.8rem', color: texture.normalBase ? '#10b981' : 'var(--text-secondary)' }}>
+                        {texture.normalBase ? '✓ Normal Base Map Loaded' : '✗ Normal Base Map Missing'}
+                      </span>
+                      <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
+                        <span style={{ fontSize: '0.75rem' }}>Upload</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="file-upload-input"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file && texture.id) handleMapUpload(texture.id, file, 'normalBase');
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Normal Finishing */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '0.8rem', color: texture.normalFinishing ? '#10b981' : 'var(--text-secondary)' }}>
+                        {texture.normalFinishing ? '✓ Normal Finishing Map Loaded' : '✗ Normal Finishing Map Missing'}
+                      </span>
+                      <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
+                        <span style={{ fontSize: '0.75rem' }}>Upload</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="file-upload-input"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file && texture.id) handleMapUpload(texture.id, file, 'normalFinishing');
                           }}
                         />
                       </div>
