@@ -70,3 +70,57 @@ export interface Collection {
   updatedAt?: string;
   models: Model[];
 }
+
+// Authentication Payloads & Responses
+export interface SignupPayload {
+  name: string;
+  email: string;
+  password?: string;
+}
+
+export interface ConfirmSignupPayload {
+  email: string;
+  code: string;
+}
+
+export interface ResendCodePayload {
+  email: string;
+}
+
+export interface LoginPayload {
+  email: string;
+  password?: string;
+}
+
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface ConfirmForgotPasswordPayload {
+  email: string;
+  code: string;
+  newPassword?: string;
+}
+
+export interface ChangePasswordPayload {
+  oldPassword?: string;
+  newPassword?: string;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface LoginResponse {
+  message?: string;
+  accessToken?: string;
+  token?: string; // fallback
+  jwtToken?: string; // fallback
+  user?: User;
+}
+

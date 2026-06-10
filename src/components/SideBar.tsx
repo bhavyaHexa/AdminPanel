@@ -3,9 +3,10 @@ import React from 'react';
 interface SideBarProps {
   currentTab: string;
   setCurrentTab: (tab: string) => void;
+  onLogout?: () => void;
 }
 
-const SideBar: React.FC<SideBarProps> = ({ currentTab, setCurrentTab }) => {
+const SideBar: React.FC<SideBarProps> = ({ currentTab, setCurrentTab, onLogout }) => {
   const tabs = [
     {
       id: 'collections',
@@ -88,6 +89,16 @@ const SideBar: React.FC<SideBarProps> = ({ currentTab, setCurrentTab }) => {
           </button>
         ))}
       </nav>
+      {onLogout && (
+        <div className="sidebar-footer">
+          <button className="sidebar-logout-btn" onClick={onLogout}>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span>Logout</span>
+          </button>
+        </div>
+      )}
     </aside>
   );
 };

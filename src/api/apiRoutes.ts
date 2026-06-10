@@ -44,4 +44,16 @@ export const API_ROUTES = {
   UPLOAD_TEXTURE_AO_ENGRAVE: (id: string) => `/textures/${id}/upload/ao-engrave`,
   UPLOAD_TEXTURE_NORMAL_BASE: (id: string) => `/textures/${id}/upload/normal-base`,
   UPLOAD_TEXTURE_NORMAL_FINISHING: (id: string) => `/textures/${id}/upload/normal-finishing`,
+
+  // Auth Endpoints
+  SIGNUP: '/auth/signup',
+  CONFIRM_SIGNUP: '/auth/confirm-signup',
+  RESEND_CODE: '/auth/resend-code',
+  LOGIN: '/auth/login',
+  REFRESH_TOKENS: '/auth/refresh',
+  FORGOT_PASSWORD: '/auth/forgot-password',
+  CONFIRM_FORGOT_PASSWORD: '/auth/confirm-forgot-password',
+  LOGOUT: '/auth/logout',
+  CHANGE_PASSWORD: '/auth/change-password',
+  ME: '/auth/me',
 };

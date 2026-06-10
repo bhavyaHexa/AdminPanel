@@ -6,4 +6,5 @@ export const QUERY_KEYS = {
   ALL_PRICES: 'allPrices',
   ALL_ASSETS: 'allAssets',
   ALL_TEXTURES: 'allTextures',
+  CURRENT_USER: 'currentUser',
 };
