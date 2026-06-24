@@ -305,46 +305,43 @@ const AddModels: React.FC = () => {
                 required
               />
             </div>
-
-            <div className="form-group">
-              <label className="form-label">Description</label>
-              <textarea
-                className="form-textarea"
-                placeholder="Brief model details..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
-
-            <div className="form-row">
+            <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
               <div className="form-group">
                 <label className="form-label">Base Metal Color</label>
-                <input
-                  type="text"
-                  className="form-input"
+                <select
+                  className="form-select"
                   value={baseMetalColor}
                   onChange={(e) => setBaseMetalColor(e.target.value)}
-                />
+                >
+                  <option value="Yellow Gold">Yellow Gold</option>
+                  <option value="White Gold">White Gold</option>
+                  <option value="Rose Gold">Rose Gold</option>
+                </select>
               </div>
               <div className="form-group">
                 <label className="form-label">Finishing Metal Color</label>
-                <input
-                  type="text"
-                  className="form-input"
+                <select
+                  className="form-select"
                   value={finishingMetalColor}
                   onChange={(e) => setFinishingMetalColor(e.target.value)}
-                />
+                >
+                  <option value="Yellow Gold">Yellow Gold</option>
+                  <option value="White Gold">White Gold</option>
+                  <option value="Rose Gold">Rose Gold</option>
+                </select>
               </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Engraving Mesh Color</label>
-              <input
-                type="text"
-                className="form-input"
-                value={engravingMeshColor}
-                onChange={(e) => setEngravingMeshColor(e.target.value)}
-              />
+              <div className="form-group">
+                <label className="form-label">Engraving Mesh Color</label>
+                <select
+                  className="form-select"
+                  value={engravingMeshColor}
+                  onChange={(e) => setEngravingMeshColor(e.target.value)}
+                >
+                  <option value="Yellow Gold">Yellow Gold</option>
+                  <option value="White Gold">White Gold</option>
+                  <option value="Rose Gold">Rose Gold</option>
+                </select>
+              </div>
             </div>
 
             <div className="form-group">
@@ -402,59 +399,62 @@ const AddModels: React.FC = () => {
                 </label>
               </div>
             </div>
-            {/* Model Image */}
-            <div className="form-group">
-              <label className="form-label">Model Image</label>
-              <div className="file-upload-zone" style={{ minHeight: "80px" }}>
-                <span className="file-upload-text">Select model image</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="file-upload-input"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setImageFile(file);
-                      setImagePreviewUrl(URL.createObjectURL(file));
-                    }
-                  }}
-                />
+            <div className="form-row">
+              {/* Model Image */}
+              <div className="form-group">
+                <label className="form-label">Model Image</label>
+                <div className="file-upload-zone" style={{ minHeight: "80px" }}>
+                  <span className="file-upload-text">Select model image</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="file-upload-input"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setImageFile(file);
+                        setImagePreviewUrl(URL.createObjectURL(file));
+                      }
+                    }}
+                  />
+                </div>
+                {imagePreviewUrl && (
+                  <img
+                    src={imagePreviewUrl}
+                    alt="Model"
+                    className="preview-img"
+                    style={{ marginTop: "0.5rem", maxHeight: "120px" }}
+                  />
+                )}
               </div>
-              {imagePreviewUrl && (
-                <img
-                  src={imagePreviewUrl}
-                  alt="Model"
-                  className="preview-img"
-                  style={{ marginTop: "0.5rem", maxHeight: "120px" }}
-                />
-              )}
-            </div>
 
-            <div className="form-group">
-              <label className="form-label">Model Preview</label>
-              <div className="file-upload-zone" style={{ minHeight: "80px" }}>
-                <span className="file-upload-text">Select preview image</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="file-upload-input"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setPreviewFile(file);
-                      setPreviewPreviewUrl(URL.createObjectURL(file));
-                    }
-                  }}
-                />
+              {/* Model Preview */}
+              <div className="form-group">
+                <label className="form-label">Model Preview</label>
+                <div className="file-upload-zone" style={{ minHeight: "80px" }}>
+                  <span className="file-upload-text">Select preview image</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="file-upload-input"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setPreviewFile(file);
+                        setPreviewPreviewUrl(URL.createObjectURL(file));
+                      }
+                    }}
+                  />
+                </div>
+                {previewPreviewUrl && (
+                  <img
+                    src={previewPreviewUrl}
+                    alt="Preview"
+                    className="preview-img"
+                    style={{ marginTop: "0.5rem", maxHeight: "120px" }}
+                  />
+                )}
               </div>
-              {previewPreviewUrl && (
-                <img
-                  src={previewPreviewUrl}
-                  alt="Preview"
-                  className="preview-img"
-                  style={{ marginTop: "0.5rem", maxHeight: "120px" }}
-                />
-              )}
             </div>
 
             <div className="form-group">
@@ -473,8 +473,18 @@ const AddModels: React.FC = () => {
                   checked={isDiamonds}
                   onChange={(e) => setIsDiamonds(e.target.checked)}
                 />
-                Contains Diamonds
+                Does this model contains Diamonds ?
               </label>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Description</label>
+              <textarea
+                className="form-textarea"
+                placeholder="Brief model details..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
             </div>
 
             <div className="btn-group">

@@ -18,6 +18,19 @@ const AddAssets: React.FC = () => {
   const [mode, setMode] = useState<'upload' | 'existing'>('upload');
   const [sourceModelName, setSourceModelName] = useState('');
   const [selectedAssetUrl, setSelectedAssetUrl] = useState('');
+  const [selectedCollectionId, setSelectedCollectionId] = useState('');
+  const [selectedModelId, setSelectedModelId] = useState('');
+  const [selectedColorId, setSelectedColorId] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Options for dependent dropdowns
+  const collectionOptions = collections;
+  const selectedCollection = collections.find(c => c.id === selectedCollectionId);
+  const modelOptions = selectedCollection?.models || [];
+  const selectedModel = modelOptions.find(m => m.id === selectedModelId);
+  const colorOptions = selectedModel?.colors || [];
+  const selectedColor = colorOptions.find(c => c.id === selectedColorId);
+  const widthOptions = selectedColor?.widths || [];
 
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -94,6 +107,27 @@ const AddAssets: React.FC = () => {
     if (details) {
       setSourceModelName(details.modelName);
     }
+
+    // Pre-populate dependent dropdown states
+    let foundCollectionId = '';
+    let foundModelId = '';
+    let foundColorId = '';
+    for (const col of collections) {
+      for (const mod of col.models || []) {
+        for (const colr of mod.colors || []) {
+          if (colr.widths?.some(w => w.id === targetWidthId)) {
+            foundCollectionId = col.id || '';
+            foundModelId = mod.id || '';
+            foundColorId = colr.id || '';
+            break;
+          }
+        }
+      }
+    }
+    setSelectedCollectionId(foundCollectionId);
+    setSelectedModelId(foundModelId);
+    setSelectedColorId(foundColorId);
+    setSelectedFile(null);
   };
 
   const handleDeleteAsset = async (id: string) => {
@@ -115,16 +149,13 @@ const AddAssets: React.FC = () => {
     }
 
     if (mode === 'upload') {
-      const fileInput = document.getElementById('glb-file-input') as HTMLInputElement;
-      const file = fileInput?.files?.[0];
-
-      if (!file) {
+      if (!selectedFile) {
         showStatus('Please select a .glb file to upload', 'error');
         return;
       }
 
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', selectedFile);
       formData.append('version', version);
 
       try {
@@ -140,8 +171,11 @@ const AddAssets: React.FC = () => {
         showStatus('GLB asset uploaded and linked successfully!');
         // Reset form
         setWidthId('');
+        setSelectedCollectionId('');
+        setSelectedModelId('');
+        setSelectedColorId('');
         setVersion('1.0.0');
-        if (fileInput) fileInput.value = '';
+        setSelectedFile(null);
       } catch (err: any) {
         const errMsg = err?.response?.data?.message || err?.response?.data?.error || err?.message || String(err);
         showStatus(`GLB Upload failed: ${errMsg}`, 'error');
@@ -170,6 +204,9 @@ const AddAssets: React.FC = () => {
         showStatus('GLB asset URL linked successfully!');
         // Reset form
         setWidthId('');
+        setSelectedCollectionId('');
+        setSelectedModelId('');
+        setSelectedColorId('');
         setVersion('1.0.0');
         setSelectedAssetUrl('');
         setSourceModelName('');
@@ -210,17 +247,83 @@ const AddAssets: React.FC = () => {
           <h2 className="card-title">{mode === 'upload' ? 'Upload GLB Asset' : 'Link Existing GLB'}</h2>
           <form onSubmit={handleFormSubmit}>
             <div className="form-group">
+              <label className="form-label">Collection</label>
+              <select
+                className="form-select"
+                value={selectedCollectionId}
+                onChange={(e) => {
+                  setSelectedCollectionId(e.target.value);
+                  setSelectedModelId('');
+                  setSelectedColorId('');
+                  setWidthId('');
+                }}
+                required
+              >
+                <option value="">-- Select Collection --</option>
+                {collectionOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Model</label>
+              <select
+                className="form-select"
+                value={selectedModelId}
+                onChange={(e) => {
+                  setSelectedModelId(e.target.value);
+                  setSelectedColorId('');
+                  setWidthId('');
+                }}
+                disabled={!selectedCollectionId}
+                required
+              >
+                <option value="">-- Select Model --</option>
+                {modelOptions.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Color</label>
+              <select
+                className="form-select"
+                value={selectedColorId}
+                onChange={(e) => {
+                  setSelectedColorId(e.target.value);
+                  setWidthId('');
+                }}
+                disabled={!selectedModelId}
+                required
+              >
+                <option value="">-- Select Color --</option>
+                {colorOptions.map((color) => (
+                  <option key={color.id} value={color.id}>
+                    {color.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
               <label className="form-label">Target Width Option</label>
               <select
                 className="form-select"
                 value={widthId}
                 onChange={(e) => handleWidthChange(e.target.value)}
+                disabled={!selectedColorId}
                 required
               >
-                <option value="">-- Select Width Option --</option>
-                {widthsList.map(({ width, colorName, modelName, collectionName }) => (
-                  <option key={width.id} value={width.id}>
-                    Width {width.value}mm ({colorName} • Model {modelName} • {collectionName})
+                <option value="">-- Select Width --</option>
+                {widthOptions.map((w) => (
+                  <option key={w.id} value={w.id || ''}>
+                    {w.value}mm
                   </option>
                 ))}
               </select>
@@ -275,32 +378,72 @@ const AddAssets: React.FC = () => {
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Asset Version</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="e.g. 1.0.0"
-                value={version}
-                onChange={(e) => setVersion(e.target.value)}
-                required
-              />
-            </div>
-
             {mode === 'upload' ? (
               <div className="form-group">
                 <label className="form-label">3D Geometry (.glb)</label>
-                <div className="file-upload-zone">
-                  <span className="file-upload-text">Drag & drop or click to select GLB file</span>
-                  <p className="file-upload-subtext">Supports .glb format only</p>
-                  <input
-                    id="glb-file-input"
-                    type="file"
-                    accept=".glb"
-                    className="file-upload-input"
-                    required={mode === 'upload'}
-                  />
-                </div>
+                {selectedFile ? (
+                  <div
+                    style={{
+                      border: '2px dashed var(--primary)',
+                      borderRadius: '12px',
+                      padding: '1.5rem',
+                      textAlign: 'center',
+                      background: 'rgba(16, 185, 129, 0.02)',
+                      marginTop: '0.5rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                    }}
+                  >
+                    <div style={{ fontSize: '2rem' }}>📦</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', width: '100%' }}>
+                      <span
+                        style={{
+                          fontWeight: 600,
+                          fontSize: '0.95rem',
+                          color: 'var(--text-primary)',
+                          wordBreak: 'break-all',
+                          display: 'block',
+                        }}
+                      >
+                        {selectedFile.name}
+                      </span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-danger-outline"
+                      style={{
+                        padding: '0.5rem 1rem',
+                        fontSize: '0.85rem',
+                        borderRadius: '8px',
+                        marginTop: '0.5rem',
+                      }}
+                      onClick={() => setSelectedFile(null)}
+                    >
+                      Remove File
+                    </button>
+                  </div>
+                ) : (
+                  <div className="file-upload-zone">
+                    <span className="file-upload-text">Drag & drop or click to select GLB file</span>
+                    <p className="file-upload-subtext">Supports .glb format only</p>
+                    <input
+                      id="glb-file-input"
+                      type="file"
+                      accept=".glb"
+                      className="file-upload-input"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setSelectedFile(file);
+                      }}
+                      required={mode === 'upload'}
+                    />
+                  </div>
+                )}
               </div>
             ) : (
               <>

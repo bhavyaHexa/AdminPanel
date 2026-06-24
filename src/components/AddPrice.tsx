@@ -18,6 +18,18 @@ const AddPrice: React.FC = () => {
   const [isDiamonds, setIsDiamonds] = useState(false);
   const [biggerSizePrice, setBiggerSizePrice] = useState('');
   const [smallerSizePrice, setSmallerSizePrice] = useState('');
+  const [selectedCollectionId, setSelectedCollectionId] = useState('');
+  const [selectedModelId, setSelectedModelId] = useState('');
+  const [selectedColorId, setSelectedColorId] = useState('');
+
+  // Options for dependent dropdowns
+  const collectionOptions = collections;
+  const selectedCollection = collections.find(c => c.id === selectedCollectionId);
+  const modelOptions = selectedCollection?.models || [];
+  const selectedModel = modelOptions.find(m => m.id === selectedModelId);
+  const colorOptions = selectedModel?.colors || [];
+  const selectedColor = colorOptions.find(c => c.id === selectedColorId);
+  const widthOptions = selectedColor?.widths || [];
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -64,6 +76,26 @@ const AddPrice: React.FC = () => {
     setIsDiamonds(price.isDiamonds);
     setBiggerSizePrice(price.biggerSizePrice);
     setSmallerSizePrice(price.smallerSizePrice);
+
+    // Pre-populate dependent dropdown states
+    let foundCollectionId = '';
+    let foundModelId = '';
+    let foundColorId = '';
+    for (const col of collections) {
+      for (const mod of col.models || []) {
+        for (const colr of mod.colors || []) {
+          if (colr.widths?.some(w => w.id === price.widthId)) {
+            foundCollectionId = col.id || '';
+            foundModelId = mod.id || '';
+            foundColorId = colr.id || '';
+            break;
+          }
+        }
+      }
+    }
+    setSelectedCollectionId(foundCollectionId);
+    setSelectedModelId(foundModelId);
+    setSelectedColorId(foundColorId);
   };
 
   const handleDelete = async (id: string) => {
@@ -82,10 +114,13 @@ const AddPrice: React.FC = () => {
     setIsDiamonds(false);
     setBiggerSizePrice('');
     setSmallerSizePrice('');
+    setWidthId('');
+    setSelectedCollectionId('');
+    setSelectedModelId('');
+    setSelectedColorId('');
   };
 
   // Flatten options for selection and listing
-  const widthsList: { width: Width; colorName: string; modelName: string; collectionName: string }[] = [];
   const pricesList: { price: PriceList; widthValue: string; colorName: string; modelName: string }[] = [];
 
   collections.forEach((collection) => {
@@ -95,12 +130,6 @@ const AddPrice: React.FC = () => {
           model.colors.forEach((color) => {
             if (color.widths && Array.isArray(color.widths)) {
               color.widths.forEach((width) => {
-                widthsList.push({
-                  width,
-                  colorName: color.name,
-                  modelName: model.name,
-                  collectionName: collection.name,
-                });
                 if (width.priceLists && Array.isArray(width.priceLists)) {
                   width.priceLists.forEach((price) => {
                     pricesList.push({
@@ -148,17 +177,83 @@ const AddPrice: React.FC = () => {
           <h2 className="card-title">{editingId ? 'Edit Price Entry' : 'Create Price Entry'}</h2>
           <form onSubmit={handleSubmit}>
             <div className="form-group">
+              <label className="form-label">Collection</label>
+              <select
+                className="form-select"
+                value={selectedCollectionId}
+                onChange={(e) => {
+                  setSelectedCollectionId(e.target.value);
+                  setSelectedModelId('');
+                  setSelectedColorId('');
+                  setWidthId('');
+                }}
+                required
+              >
+                <option value="">-- Select Collection --</option>
+                {collectionOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Model</label>
+              <select
+                className="form-select"
+                value={selectedModelId}
+                onChange={(e) => {
+                  setSelectedModelId(e.target.value);
+                  setSelectedColorId('');
+                  setWidthId('');
+                }}
+                disabled={!selectedCollectionId}
+                required
+              >
+                <option value="">-- Select Model --</option>
+                {modelOptions.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Color</label>
+              <select
+                className="form-select"
+                value={selectedColorId}
+                onChange={(e) => {
+                  setSelectedColorId(e.target.value);
+                  setWidthId('');
+                }}
+                disabled={!selectedModelId}
+                required
+              >
+                <option value="">-- Select Color --</option>
+                {colorOptions.map((color) => (
+                  <option key={color.id} value={color.id}>
+                    {color.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
               <label className="form-label">Parent Width Dimension</label>
               <select
                 className="form-select"
                 value={widthId}
                 onChange={(e) => setWidthId(e.target.value)}
+                disabled={!selectedColorId}
                 required
               >
-                <option value="">-- Select Width Option --</option>
-                {widthsList.map(({ width, colorName, modelName, collectionName }) => (
-                  <option key={width.id} value={width.id}>
-                    Width {width.value}mm ({colorName} • Model {modelName} • {collectionName})
+                <option value="">-- Select Width --</option>
+                {widthOptions.map((w) => (
+                  <option key={w.id} value={w.id || ''}>
+                    {w.value}mm
                   </option>
                 ))}
               </select>

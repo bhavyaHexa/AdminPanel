@@ -23,7 +23,6 @@ const AddTextures: React.FC = () => {
   const uploadNormalFinishing = useUploadTextureNormalFinishing();
 
   // Form State
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedCollectionId, setSelectedCollectionId] = useState('');
   const [selectedModelId, setSelectedModelId] = useState('');
   const [selectedColorId, setSelectedColorId] = useState('');
@@ -40,32 +39,25 @@ const AddTextures: React.FC = () => {
     setTimeout(() => setStatusMsg(null), 4000);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!widthId) {
-      showStatus('Please select a Width Option', 'error');
-      return;
-    }
-
+  const handleUploadClick = async (file: File, type: 'gold' | 'silver' | 'engrave' | 'normalBase' | 'normalFinishing') => {
+    if (!widthId) return;
     try {
-      if (editingId) {
-        await updateTexture.mutateAsync({ id: editingId, data: { widthId } });
-        showStatus('Texture container updated successfully!');
-      } else {
-        await createTexture.mutateAsync({ widthId });
-        showStatus('Texture container created successfully! You can now upload maps.');
+      let textureId = currentTexture?.id;
+      if (!textureId) {
+        const created = await createTexture.mutateAsync({ widthId });
+        textureId = created.id;
       }
-      handleCancel();
+      if (textureId) {
+        await handleMapUpload(textureId, file, type);
+      }
     } catch (err: unknown) {
-      showStatus(String(err), 'error');
+      showStatus(`Upload failed: ${String(err)}`, 'error');
     }
   };
 
   const handleEdit = (texture: Texture) => {
     if (!texture.id) return;
-    setEditingId(texture.id);
-    setWidthId(texture.widthId);
-
+    
     // Find parent color, model, and collection for this widthId
     let foundCollectionId = '';
     let foundModelId = '';
@@ -90,10 +82,10 @@ const AddTextures: React.FC = () => {
     setSelectedCollectionId(foundCollectionId);
     setSelectedModelId(foundModelId);
     setSelectedColorId(foundColorId);
+    setWidthId(texture.widthId);
   };
 
   const handleCancel = () => {
-    setEditingId(null);
     setWidthId('');
     setSelectedCollectionId('');
     setSelectedModelId('');
@@ -105,9 +97,7 @@ const AddTextures: React.FC = () => {
     try {
       await deleteTexture.mutateAsync(id);
       showStatus('Texture configuration deleted successfully!');
-      if (editingId === id) {
-        handleCancel();
-      }
+      handleCancel();
     } catch (err: unknown) {
       showStatus(String(err), 'error');
     }
@@ -140,7 +130,6 @@ const AddTextures: React.FC = () => {
   };
 
   // Flatten options for selection and listing
-  const widthsList: { width: Width; colorName: string; modelName: string; collectionName: string }[] = [];
   const texturesList: {
     texture: Texture;
     widthValue: string;
@@ -159,11 +148,6 @@ const AddTextures: React.FC = () => {
           model.colors.forEach((color) => {
             if (color.widths && Array.isArray(color.widths)) {
               color.widths.forEach((width) => {
-                // Only suggest widths that do NOT already have textures configured,
-                // or if we are editing, allow keeping the currently linked width.
-                if (!width.texture || (editingId && width.texture.id === editingId)) {
-                  widthsList.push({ width, colorName: color.name, modelName: model.name, collectionName: collection.name });
-                }
                 if (width.texture) {
                   texturesList.push({
                     texture: width.texture,
@@ -198,11 +182,12 @@ const AddTextures: React.FC = () => {
   const formColor = formColorOptions.find((c) => c.id === selectedColorId);
   const formWidthOptions = formColor?.widths || [];
 
-  // Filter the form widths option list so we only show widths that do not have textures configured
-  // (or if editing, allow the currently linked width)
-  const availableFormWidths = formWidthOptions.filter((width) => {
-    return !width.texture || (editingId && width.texture.id === editingId);
-  });
+  // Show all width options
+  const availableFormWidths = formWidthOptions;
+
+  // Find existing texture configuration for selected width
+  const selectedWidthObj = formWidthOptions.find(w => w.id === widthId);
+  const currentTexture = selectedWidthObj?.texture;
 
   // Filter textures
   const filteredTextures = texturesList.filter((item) => {
@@ -238,8 +223,8 @@ const AddTextures: React.FC = () => {
       <div className="dashboard-grid">
         {/* Form Panel */}
         <div className="card-panel">
-          <h2 className="card-title">{editingId ? 'Edit Texture Container' : 'Link Texture Container'}</h2>
-          <form onSubmit={handleSubmit}>
+          <h2 className="card-title">Configure Texture Maps</h2>
+          <div>
             <div className="form-group">
               <label className="form-label">Collection</label>
               <select
@@ -323,21 +308,107 @@ const AddTextures: React.FC = () => {
               </select>
             </div>
 
-            <div className="btn-group">
-              {editingId && (
-                <button type="button" className="btn btn-ghost" onClick={handleCancel}>
-                  Cancel
-                </button>
-              )}
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={createTexture.isPending || updateTexture.isPending}
-              >
-                {editingId ? 'Save Changes' : 'Create Texture Config'}
-              </button>
-            </div>
-          </form>
+            {widthId && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1.5rem', background: 'rgba(0,0,0,0.15)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: '0 0 0.5rem 0' }}>Ambient Occlusion & Normal Maps</h3>
+                
+                {/* Gold AO */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.85rem', color: currentTexture?.aoGold ? '#10b981' : 'var(--text-secondary)' }}>
+                    {currentTexture?.aoGold ? '✓ Gold AO Map Loaded' : '✗ Gold AO Map Missing'}
+                  </span>
+                  <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
+                    <span style={{ fontSize: '0.75rem' }}>Upload</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="file-upload-input"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadClick(file, 'gold');
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Silver AO */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.85rem', color: currentTexture?.aoSilver ? '#10b981' : 'var(--text-secondary)' }}>
+                    {currentTexture?.aoSilver ? '✓ Silver AO Map Loaded' : '✗ Silver AO Map Missing'}
+                  </span>
+                  <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
+                    <span style={{ fontSize: '0.75rem' }}>Upload</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="file-upload-input"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadClick(file, 'silver');
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Engrave AO */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.85rem', color: currentTexture?.aoEngrave ? '#10b981' : 'var(--text-secondary)' }}>
+                    {currentTexture?.aoEngrave ? '✓ Engrave AO Map Loaded' : '✗ Engrave AO Map Missing'}
+                  </span>
+                  <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
+                    <span style={{ fontSize: '0.75rem' }}>Upload</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="file-upload-input"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadClick(file, 'engrave');
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Normal Base */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.85rem', color: currentTexture?.normalBase ? '#10b981' : 'var(--text-secondary)' }}>
+                    {currentTexture?.normalBase ? '✓ Normal Base Map Loaded' : '✗ Normal Base Map Missing'}
+                  </span>
+                  <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
+                    <span style={{ fontSize: '0.75rem' }}>Upload</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="file-upload-input"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadClick(file, 'normalBase');
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Normal Finishing */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.85rem', color: currentTexture?.normalFinishing ? '#10b981' : 'var(--text-secondary)' }}>
+                    {currentTexture?.normalFinishing ? '✓ Normal Finishing Map Loaded' : '✗ Normal Finishing Map Missing'}
+                  </span>
+                  <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
+                    <span style={{ fontSize: '0.75rem' }}>Upload</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="file-upload-input"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadClick(file, 'normalFinishing');
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* List Panel */}

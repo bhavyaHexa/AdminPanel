@@ -18,11 +18,13 @@ const AddColors: React.FC = () => {
 
   // Form State
   const [modelId, setModelId] = useState('');
-  const [name, setName] = useState('');
+  const [name, setName] = useState('Yellow Gold');
   const [hex, setHex] = useState('#ffc35c');
   const [sku, setSku] = useState('');
   const [description, setDescription] = useState('');
   const [filterModelId, setFilterModelId] = useState('');
+  const [swatchFile, setSwatchFile] = useState<File | null>(null);
+  const [swatchPreviewUrl, setSwatchPreviewUrl] = useState('');
 
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -55,11 +57,23 @@ const AddColors: React.FC = () => {
     };
 
     try {
+      let colorId = editingId;
       if (editingId) {
         await updateColor.mutateAsync({ id: editingId, data: colorPayload });
+        if (swatchFile) {
+          const formData = new FormData();
+          formData.append('file', swatchFile);
+          await uploadImage.mutateAsync({ id: editingId, formData });
+        }
         showStatus('Color variant updated successfully!');
       } else {
-        await createColor.mutateAsync(colorPayload);
+        const created = await createColor.mutateAsync(colorPayload);
+        colorId = created.id || null;
+        if (colorId && swatchFile) {
+          const formData = new FormData();
+          formData.append('file', swatchFile);
+          await uploadImage.mutateAsync({ id: colorId, formData });
+        }
         showStatus('Color variant created successfully!');
       }
       handleCancel();
@@ -76,6 +90,8 @@ const AddColors: React.FC = () => {
     setSku(color.sku);
     setDescription(color.description || '');
     setModelId(color.modelId);
+    setSwatchFile(null);
+    setSwatchPreviewUrl(color.image || '');
   };
 
   const handleDelete = async (id: string) => {
@@ -90,23 +106,14 @@ const AddColors: React.FC = () => {
 
   const handleCancel = () => {
     setEditingId(null);
-    setName('');
+    setName('Yellow Gold');
     setHex('#ffc35c');
     setSku('');
     setDescription('');
+    setSwatchFile(null);
+    setSwatchPreviewUrl('');
   };
 
-  const handleFileUpload = async (colorId: string, file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      await uploadImage.mutateAsync({ id: colorId, formData });
-      showStatus('Color swatch image uploaded successfully!');
-    } catch (err: unknown) {
-      showStatus(`Upload failed: ${String(err)}`, 'error');
-    }
-  };
 
   // Flatten colors from models to list them
   const colorsList: Color[] = [];
@@ -176,35 +183,101 @@ const AddColors: React.FC = () => {
 
             <div className="form-group">
               <label className="form-label">Color Name</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="e.g. Yellow Gold, White Gold, Rose Gold"
+              <select
+                className="form-select"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setName(val);
+                  if (val === 'Yellow Gold') {
+                    setHex('#ffc35c');
+                  } else if (val === 'White Gold') {
+                    setHex('#f6f5f5');
+                  } else if (val === 'Rose Gold') {
+                    setHex('#e8a274');
+                  }
+                }}
                 required
-              />
+              >
+                <option value="Yellow Gold">Yellow Gold</option>
+                <option value="White Gold">White Gold</option>
+                <option value="Rose Gold">Rose Gold</option>
+              </select>
             </div>
 
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Hex Color Code</label>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
                   <input
                     type="color"
-                    style={{ width: '45px', height: '42px', padding: '0', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                    style={{ width: '45px', height: '42px', padding: '0', border: 'none', background: 'transparent', cursor: 'not-allowed' }}
                     value={hex}
-                    onChange={(e) => setHex(e.target.value)}
+                    disabled
                   />
                   <input
                     type="text"
                     className="form-input"
                     placeholder="#ffffff"
                     value={hex}
-                    onChange={(e) => setHex(e.target.value)}
+                    readOnly
+                    style={{ cursor: 'not-allowed', background: 'rgba(255, 255, 255, 0.05)' }}
                     required
                   />
                 </div>
+
+                <label className="form-label" style={{ marginTop: '1rem' }}>Swatch Image</label>
+                <div className="file-upload-zone" style={{ minHeight: '80px' }}>
+                  <span className="file-upload-text">Select swatch image</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="file-upload-input"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setSwatchFile(file);
+                        setSwatchPreviewUrl(URL.createObjectURL(file));
+                      }
+                    }}
+                  />
+                </div>
+                {swatchPreviewUrl && (
+                  <div style={{ marginTop: '0.5rem', position: 'relative', display: 'inline-block' }}>
+                    <img
+                      src={swatchPreviewUrl}
+                      alt="Swatch Preview"
+                      style={{ maxHeight: '120px', borderRadius: '8px' }}
+                    />
+                    <button
+                      type="button"
+                      style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        background: 'rgba(0,0,0,0.6)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.8rem',
+                        lineHeight: '1',
+                        padding: 0,
+                      }}
+                      onClick={() => {
+                        setSwatchFile(null);
+                        setSwatchPreviewUrl('');
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="form-group">
@@ -314,24 +387,7 @@ const AddColors: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Image swatch uploads */}
-                    {color.id && (
-                      <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem' }}>
-                        <span className="form-label" style={{ fontSize: '0.75rem' }}>Upload Swatch Image</span>
-                        <div className="file-upload-zone" style={{ padding: '0.5rem', minHeight: '60px' }}>
-                          <span className="file-upload-text" style={{ fontSize: '0.75rem' }}>Select file to upload to S3</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="file-upload-input"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleFileUpload(color.id!, file);
-                            }}
-                          />
-                        </div>
-                      </div>
-                    )}
+
                   </div>
                 );
               })}

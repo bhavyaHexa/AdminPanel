@@ -28,6 +28,10 @@ const AddCollection: React.FC = () => {
   const [name, setName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string>('');
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
+  const [previewPreviewUrl, setPreviewPreviewUrl] = useState<string>('');
 
   const showStatus = (text: string, type: 'success' | 'error' = 'success') => {
     setStatusMsg({ type, text });
@@ -48,14 +52,38 @@ const AddCollection: React.FC = () => {
     }
 
     try {
+      let collectionId = editingId;
       if (editingId) {
         await updateCollection.mutateAsync({
           id: editingId,
           data: { name },
         });
+        if (coverFile) {
+          const formData = new FormData();
+          formData.append('file', coverFile);
+          await uploadImage.mutateAsync({ id: editingId, formData });
+        }
+        if (previewFile) {
+          const formData = new FormData();
+          formData.append('file', previewFile);
+          await uploadPreview.mutateAsync({ id: editingId, formData });
+        }
         showStatus('Collection updated successfully!');
       } else {
-        await createCollection.mutateAsync({ name });
+        const created = await createCollection.mutateAsync({ name });
+        collectionId = created.id || null;
+        if (collectionId) {
+          if (coverFile) {
+            const formData = new FormData();
+            formData.append('file', coverFile);
+            await uploadImage.mutateAsync({ id: collectionId, formData });
+          }
+          if (previewFile) {
+            const formData = new FormData();
+            formData.append('file', previewFile);
+            await uploadPreview.mutateAsync({ id: collectionId, formData });
+          }
+        }
         showStatus('Collection created successfully!');
       }
       handleCancel();
@@ -69,6 +97,10 @@ const AddCollection: React.FC = () => {
     if (!collection.id) return;
     setEditingId(collection.id);
     setName(collection.name);
+    setCoverFile(null);
+    setCoverPreviewUrl(collection.image || '');
+    setPreviewFile(null);
+    setPreviewPreviewUrl(collection.preview_url || '');
   };
 
   const handleDelete = async (collection: Collection) => {
@@ -128,24 +160,10 @@ const AddCollection: React.FC = () => {
   const handleCancel = () => {
     setEditingId(null);
     setName('');
-  };
-
-  const handleFileUpload = async (collectionId: string, file: File, type: 'image' | 'preview') => {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      if (type === 'image') {
-        await uploadImage.mutateAsync({ id: collectionId, formData });
-        showStatus('Collection cover image uploaded successfully!');
-      } else {
-        await uploadPreview.mutateAsync({ id: collectionId, formData });
-        showStatus('Collection preview uploaded successfully!');
-      }
-    } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.response?.data?.error || err?.message || String(err);
-      showStatus(`Upload failed: ${errMsg}`, 'error');
-    }
+    setCoverFile(null);
+    setCoverPreviewUrl('');
+    setPreviewFile(null);
+    setPreviewPreviewUrl('');
   };
 
   return (
@@ -186,6 +204,118 @@ const AddCollection: React.FC = () => {
                 onChange={(e) => setName(e.target.value)}
                 required
               />
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Cover Image</label>
+                <div className="file-upload-zone" style={{ minHeight: '80px' }}>
+                  <span className="file-upload-text">Select cover image</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="file-upload-input"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setCoverFile(file);
+                        setCoverPreviewUrl(URL.createObjectURL(file));
+                      }
+                    }}
+                  />
+                </div>
+                {coverPreviewUrl && (
+                  <div style={{ marginTop: '0.5rem', position: 'relative', display: 'inline-block' }}>
+                    <img
+                      src={coverPreviewUrl}
+                      alt="Cover Preview"
+                      style={{ maxHeight: '120px', borderRadius: '8px' }}
+                    />
+                    <button
+                      type="button"
+                      style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        background: 'rgba(0,0,0,0.6)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.8rem',
+                        lineHeight: '1',
+                        padding: 0,
+                      }}
+                      onClick={() => {
+                        setCoverFile(null);
+                        setCoverPreviewUrl('');
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Preview Image</label>
+                <div className="file-upload-zone" style={{ minHeight: '80px' }}>
+                  <span className="file-upload-text">Select preview image</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="file-upload-input"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setPreviewFile(file);
+                        setPreviewPreviewUrl(URL.createObjectURL(file));
+                      }
+                    }}
+                  />
+                </div>
+                {previewPreviewUrl && (
+                  <div style={{ marginTop: '0.5rem', position: 'relative', display: 'inline-block' }}>
+                    <img
+                      src={previewPreviewUrl}
+                      alt="Preview Preview"
+                      style={{ maxHeight: '120px', borderRadius: '8px' }}
+                    />
+                    <button
+                      type="button"
+                      style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        background: 'rgba(0,0,0,0.6)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.8rem',
+                        lineHeight: '1',
+                        padding: 0,
+                      }}
+                      onClick={() => {
+                        setPreviewFile(null);
+                        setPreviewPreviewUrl('');
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="btn-group">
@@ -259,42 +389,7 @@ const AddCollection: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Image upload options */}
-                  {collection.id && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem' }}>
-                      <div>
-                        <span className="form-label" style={{ fontSize: '0.75rem' }}>Cover Image</span>
-                        <div className="file-upload-zone" style={{ padding: '0.5rem', minHeight: '60px' }}>
-                          <span className="file-upload-text" style={{ fontSize: '0.75rem' }}>Upload Image</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="file-upload-input"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleFileUpload(collection.id!, file, 'image');
-                            }}
-                          />
-                        </div>
-                      </div>
 
-                      <div>
-                        <span className="form-label" style={{ fontSize: '0.75rem' }}>Preview Image</span>
-                        <div className="file-upload-zone" style={{ padding: '0.5rem', minHeight: '60px' }}>
-                          <span className="file-upload-text" style={{ fontSize: '0.75rem' }}>Upload Preview</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="file-upload-input"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleFileUpload(collection.id!, file, 'preview');
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
