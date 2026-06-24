@@ -3,7 +3,7 @@ import useGetAllCollections from '../hooks/useGetAllCollections';
 import usePostPrices from '../hooks/usePostPrices';
 import { useUpdatePriceList } from '../hooks/useUpdatePriceList';
 import { useDeletePriceList } from '../hooks/useDeletePriceList';
-import type { Width, PriceList } from '../types';
+import type { PriceList } from '../types';
 
 const AddPrice: React.FC = () => {
   const { data: collections = [] } = useGetAllCollections();

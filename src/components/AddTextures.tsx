@@ -6,15 +6,13 @@ import { useUploadTextureAoSilver } from '../hooks/useUploadTextureAoSilver';
 import { useUploadTextureAoEngrave } from '../hooks/useUploadTextureAoEngrave';
 import { useUploadTextureNormalBase } from '../hooks/useUploadTextureNormalBase';
 import { useUploadTextureNormalFinishing } from '../hooks/useUploadTextureNormalFinishing';
-import { useUpdateTexture } from '../hooks/useUpdateTexture';
 import { useDeleteTexture } from '../hooks/useDeleteTexture';
-import type { Width, Texture } from '../types';
+import type { Texture } from '../types';
 
 const AddTextures: React.FC = () => {
   const { data: collections = [] } = useGetAllCollections();
 
   const createTexture = usePostTextures();
-  const updateTexture = useUpdateTexture();
   const deleteTexture = useDeleteTexture();
   const uploadGold = useUploadTextureAoGold();
   const uploadSilver = useUploadTextureAoSilver();
