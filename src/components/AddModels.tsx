@@ -10,6 +10,7 @@ import { useDeleteColor } from "../hooks/useDeleteColor";
 import { useDeleteWidth } from "../hooks/useDeleteWidth";
 import { useDeletePriceList } from "../hooks/useDeletePriceList";
 import { useDeleteTexture } from "../hooks/useDeleteTexture";
+import { useDeleteAsset3D } from "../hooks/useDeleteAsset3D";
 import type { Model } from "../types";
 
 const AddModels: React.FC = () => {
@@ -23,6 +24,7 @@ const AddModels: React.FC = () => {
   const deleteWidth = useDeleteWidth();
   const deletePriceList = useDeletePriceList();
   const deleteTexture = useDeleteTexture();
+  const deleteAsset3D = useDeleteAsset3D();
   const uploadImage = useUploadModelImage();
   const uploadPreview = useUploadModelPreview();
 
@@ -197,6 +199,10 @@ const AddModels: React.FC = () => {
               // Delete texture
               if (width.texture && width.texture.id) {
                 await deleteTexture.mutateAsync(width.texture.id);
+              }
+              // Delete asset3d
+              if (width.asset3D && width.asset3D.id) {
+                await deleteAsset3D.mutateAsync(width.asset3D.id);
               }
               // Delete width
               if (width.id) {

@@ -14,7 +14,7 @@ const AddPrice: React.FC = () => {
 
   // Form State
   const [widthId, setWidthId] = useState('');
-  const [carat, setCarat] = useState('18K');
+  const [carat, setCarat] = useState('18k');
   const [isDiamonds, setIsDiamonds] = useState(false);
   const [biggerSizePrice, setBiggerSizePrice] = useState('');
   const [smallerSizePrice, setSmallerSizePrice] = useState('');
@@ -110,7 +110,7 @@ const AddPrice: React.FC = () => {
 
   const handleCancel = () => {
     setEditingId(null);
-    setCarat('18K');
+    setCarat('18k');
     setIsDiamonds(false);
     setBiggerSizePrice('');
     setSmallerSizePrice('');
@@ -268,11 +268,9 @@ const AddPrice: React.FC = () => {
                   onChange={(e) => setCarat(e.target.value)}
                   required
                 >
-                  <option value="9K">9K Gold</option>
-                  <option value="14K">14K Gold</option>
-                  <option value="18K">18K Gold</option>
-                  <option value="PT950">Platinum PT950</option>
-                  <option value="Silver">Silver</option>
+                  <option value="9k">9k Gold</option>
+                  <option value="14k">14k Gold</option>
+                  <option value="18k">18k Gold</option>
                 </select>
               </div>
 

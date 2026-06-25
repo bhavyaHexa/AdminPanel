@@ -5,6 +5,10 @@ import usePostColors from '../hooks/usePostColors';
 import { useUpdateColor } from '../hooks/useUpdateColor';
 import { useDeleteColor } from '../hooks/useDeleteColor';
 import { useUploadColorImage } from '../hooks/useUploadColorImage';
+import { useDeleteWidth } from '../hooks/useDeleteWidth';
+import { useDeletePriceList } from '../hooks/useDeletePriceList';
+import { useDeleteTexture } from '../hooks/useDeleteTexture';
+import { useDeleteAsset3D } from '../hooks/useDeleteAsset3D';
 import type { Color } from '../types';
 
 const AddColors: React.FC = () => {
@@ -14,6 +18,10 @@ const AddColors: React.FC = () => {
   const createColor = usePostColors();
   const updateColor = useUpdateColor();
   const deleteColor = useDeleteColor();
+  const deleteWidth = useDeleteWidth();
+  const deletePriceList = useDeletePriceList();
+  const deleteTexture = useDeleteTexture();
+  const deleteAsset3D = useDeleteAsset3D();
   const uploadImage = useUploadColorImage();
 
   // Form State
@@ -95,8 +103,53 @@ const AddColors: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this color?')) return;
+    if (!window.confirm('Are you sure you want to delete this color and all its widths and configurations?')) return;
     try {
+      showStatus('Deleting color variant and all associated configurations... Please wait.', 'success');
+
+      // Find the fully populated color from the collections array
+      let fullColor: Color | undefined;
+      for (const c of collections) {
+        if (c.models) {
+          for (const m of c.models) {
+            if (m.colors) {
+              const found = m.colors.find((color) => color.id === id);
+              if (found) {
+                fullColor = found;
+                break;
+              }
+            }
+          }
+        }
+        if (fullColor) break;
+      }
+
+      const targetColor = fullColor;
+      if (targetColor && targetColor.widths && targetColor.widths.length > 0) {
+        for (const width of targetColor.widths) {
+          // Delete price lists
+          if (width.priceLists && width.priceLists.length > 0) {
+            for (const price of width.priceLists) {
+              if (price.id) {
+                await deletePriceList.mutateAsync(price.id);
+              }
+            }
+          }
+          // Delete texture
+          if (width.texture && width.texture.id) {
+            await deleteTexture.mutateAsync(width.texture.id);
+          }
+          // Delete asset3d
+          if (width.asset3D && width.asset3D.id) {
+            await deleteAsset3D.mutateAsync(width.asset3D.id);
+          }
+          // Delete width
+          if (width.id) {
+            await deleteWidth.mutateAsync(width.id);
+          }
+        }
+      }
+
       await deleteColor.mutateAsync(id);
       showStatus('Color variant deleted successfully!');
     } catch (err: unknown) {

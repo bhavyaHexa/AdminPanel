@@ -3,6 +3,9 @@ import useGetAllCollections from '../hooks/useGetAllCollections';
 import usePostWidths from '../hooks/usePostWidths';
 import { useUpdateWidth } from '../hooks/useUpdateWidth';
 import { useDeleteWidth } from '../hooks/useDeleteWidth';
+import { useDeletePriceList } from '../hooks/useDeletePriceList';
+import { useDeleteTexture } from '../hooks/useDeleteTexture';
+import { useDeleteAsset3D } from '../hooks/useDeleteAsset3D';
 import type { Width, Color } from '../types';
 
 const AddWidths: React.FC = () => {
@@ -11,6 +14,9 @@ const AddWidths: React.FC = () => {
   const createWidth = usePostWidths();
   const updateWidth = useUpdateWidth();
   const deleteWidth = useDeleteWidth();
+  const deletePriceList = useDeletePriceList();
+  const deleteTexture = useDeleteTexture();
+  const deleteAsset3D = useDeleteAsset3D();
 
   // Form State
   const [selectedCollectionId, setSelectedCollectionId] = useState('');
@@ -93,8 +99,52 @@ const AddWidths: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this width?')) return;
+    if (!window.confirm('Are you sure you want to delete this width and all its configurations?')) return;
     try {
+      showStatus('Deleting width variant and all associated configurations... Please wait.', 'success');
+
+      // Find the fully populated width from the collections array
+      let fullWidth: Width | undefined;
+      for (const c of collections) {
+        if (c.models) {
+          for (const m of c.models) {
+            if (m.colors) {
+              for (const col of m.colors) {
+                if (col.widths) {
+                  const found = col.widths.find((w) => w.id === id);
+                  if (found) {
+                    fullWidth = found;
+                    break;
+                  }
+                }
+              }
+            }
+            if (fullWidth) break;
+          }
+        }
+        if (fullWidth) break;
+      }
+
+      const targetWidth = fullWidth;
+      if (targetWidth) {
+        // Delete price lists
+        if (targetWidth.priceLists && targetWidth.priceLists.length > 0) {
+          for (const price of targetWidth.priceLists) {
+            if (price.id) {
+              await deletePriceList.mutateAsync(price.id);
+            }
+          }
+        }
+        // Delete texture
+        if (targetWidth.texture && targetWidth.texture.id) {
+          await deleteTexture.mutateAsync(targetWidth.texture.id);
+        }
+        // Delete asset3d
+        if (targetWidth.asset3D && targetWidth.asset3D.id) {
+          await deleteAsset3D.mutateAsync(targetWidth.asset3D.id);
+        }
+      }
+
       await deleteWidth.mutateAsync(id);
       showStatus('Width variant deleted successfully!');
     } catch (err: unknown) {

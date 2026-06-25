@@ -10,6 +10,7 @@ import { useDeleteColor } from '../hooks/useDeleteColor';
 import { useDeleteWidth } from '../hooks/useDeleteWidth';
 import { useDeletePriceList } from '../hooks/useDeletePriceList';
 import { useDeleteTexture } from '../hooks/useDeleteTexture';
+import { useDeleteAsset3D } from '../hooks/useDeleteAsset3D';
 import type { Collection } from '../types';
 
 const AddCollection: React.FC = () => {
@@ -22,6 +23,7 @@ const AddCollection: React.FC = () => {
   const deleteWidth = useDeleteWidth();
   const deletePriceList = useDeletePriceList();
   const deleteTexture = useDeleteTexture();
+  const deleteAsset3D = useDeleteAsset3D();
   const uploadImage = useUploadCollectionImage();
   const uploadPreview = useUploadCollectionPreview();
 
@@ -133,6 +135,9 @@ const AddCollection: React.FC = () => {
                   }
                   if (width.texture && width.texture.id) {
                     await deleteTexture.mutateAsync(width.texture.id);
+                  }
+                  if (width.asset3D && width.asset3D.id) {
+                    await deleteAsset3D.mutateAsync(width.asset3D.id);
                   }
                   if (width.id) await deleteWidth.mutateAsync(width.id);
                 }
