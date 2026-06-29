@@ -6,7 +6,6 @@ import usePostModel from "../hooks/usePostModel";
 import { useUpdateModel } from "../hooks/useUpdateModel";
 import { useDeleteModel } from "../hooks/useDeleteModel";
 import { useUploadModelImage } from "../hooks/useUploadModelImage";
-import { useUploadModelPreview } from "../hooks/useUploadModelPreview";
 import { useDeleteColor } from "../hooks/useDeleteColor";
 import { useDeleteWidth } from "../hooks/useDeleteWidth";
 import { useDeletePriceList } from "../hooks/useDeletePriceList";
@@ -27,12 +26,10 @@ const AddModels: React.FC = () => {
   const deleteTexture = useDeleteTexture();
   const deleteAsset3D = useDeleteAsset3D();
   const uploadImage = useUploadModelImage();
-  const uploadPreview = useUploadModelPreview();
 
   // Form State
   const [collectionId, setCollectionId] = useState("");
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
   const [baseMetalColor, setBaseMetalColor] = useState("Yellow Gold");
   const [finishingMetalColor, setFinishingMetalColor] = useState("Yellow Gold");
   const [engravingMeshColor, setEngravingMeshColor] = useState("Yellow Gold");
@@ -45,9 +42,7 @@ const AddModels: React.FC = () => {
 
   // Image upload state for new/edit model
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string>("");
-  const [previewPreviewUrl, setPreviewPreviewUrl] = useState<string>("");
 
   // Filter for existing models by collection
   const [filterCollectionId, setFilterCollectionId] = useState<string>("");
@@ -78,7 +73,6 @@ const AddModels: React.FC = () => {
 
     const modelPayload: Partial<Model> = {
       name,
-      description: description || null,
       base_metal_color: baseMetalColor,
       finishing_metal_color: finishingMetalColor,
       engraving_mesh_color: engravingMeshColor,
@@ -108,11 +102,6 @@ const AddModels: React.FC = () => {
           fd.append("file", imageFile);
           await uploadImage.mutateAsync({ id: editingId, formData: fd });
         }
-        if (previewFile) {
-          const fd = new FormData();
-          fd.append("file", previewFile);
-          await uploadPreview.mutateAsync({ id: editingId, formData: fd });
-        }
         showStatus("Model updated successfully!");
       } else {
         const created = await createModel.mutateAsync(modelPayload);
@@ -121,11 +110,6 @@ const AddModels: React.FC = () => {
           const fd = new FormData();
           fd.append("file", imageFile);
           await uploadImage.mutateAsync({ id: newId!, formData: fd });
-        }
-        if (previewFile) {
-          const fd = new FormData();
-          fd.append("file", previewFile);
-          await uploadPreview.mutateAsync({ id: newId!, formData: fd });
         }
         showStatus("Model created successfully!");
       }
@@ -140,7 +124,6 @@ const AddModels: React.FC = () => {
     if (!model.id) return;
     setEditingId(model.id);
     setName(model.name);
-    setDescription(model.description || "");
     setBaseMetalColor(model.base_metal_color);
     setFinishingMetalColor(model.finishing_metal_color);
     setEngravingMeshColor(model.engraving_mesh_color);
@@ -234,7 +217,6 @@ const AddModels: React.FC = () => {
   const handleCancel = () => {
     setEditingId(null);
     setName("");
-    setDescription("");
     setBaseMetalColor("Yellow Gold");
     setFinishingMetalColor("Yellow Gold");
     setEngravingMeshColor("Yellow Gold");
@@ -243,9 +225,7 @@ const AddModels: React.FC = () => {
     setColorChangeFinishing(true);
     setColorChangeEngraving(true);
     setImageFile(null);
-    setPreviewFile(null);
     setImagePreviewUrl("");
-    setPreviewPreviewUrl("");
   };
 
   const isAnyActionPending = 
@@ -253,8 +233,7 @@ const AddModels: React.FC = () => {
     createModel.isPending || 
     updateModel.isPending || 
     deleteModel.isPending || 
-    uploadImage.isPending || 
-    uploadPreview.isPending;
+    uploadImage.isPending;
 
   return (
     <div>
@@ -263,7 +242,7 @@ const AddModels: React.FC = () => {
           message={
             deleteModel.isPending
               ? "Deleting model..."
-              : uploadImage.isPending || uploadPreview.isPending
+              : uploadImage.isPending
               ? "Uploading graphics..."
               : "Saving model..."
           }
@@ -425,62 +404,31 @@ const AddModels: React.FC = () => {
                 </label>
               </div>
             </div>
-            <div className="form-row">
-              {/* Model Image */}
-              <div className="form-group">
-                <label className="form-label">Model Image</label>
-                <div className="file-upload-zone" style={{ minHeight: "80px" }}>
-                  <span className="file-upload-text">Select model image</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="file-upload-input"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setImageFile(file);
-                        setImagePreviewUrl(URL.createObjectURL(file));
-                      }
-                    }}
-                  />
-                </div>
-                {imagePreviewUrl && (
-                  <img
-                    src={imagePreviewUrl}
-                    alt="Model"
-                    className="preview-img"
-                    style={{ marginTop: "0.5rem", maxHeight: "120px" }}
-                  />
-                )}
+            <div className="form-group">
+              <label className="form-label">Model Image</label>
+              <div className="file-upload-zone" style={{ minHeight: "80px" }}>
+                <span className="file-upload-text">Select model image</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="file-upload-input"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setImageFile(file);
+                      setImagePreviewUrl(URL.createObjectURL(file));
+                    }
+                  }}
+                />
               </div>
-
-              {/* Model Preview */}
-              <div className="form-group">
-                <label className="form-label">Model Preview</label>
-                <div className="file-upload-zone" style={{ minHeight: "80px" }}>
-                  <span className="file-upload-text">Select preview image</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="file-upload-input"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setPreviewFile(file);
-                        setPreviewPreviewUrl(URL.createObjectURL(file));
-                      }
-                    }}
-                  />
-                </div>
-                {previewPreviewUrl && (
-                  <img
-                    src={previewPreviewUrl}
-                    alt="Preview"
-                    className="preview-img"
-                    style={{ marginTop: "0.5rem", maxHeight: "120px" }}
-                  />
-                )}
-              </div>
+              {imagePreviewUrl && (
+                <img
+                  src={imagePreviewUrl}
+                  alt="Model"
+                  className="preview-img"
+                  style={{ marginTop: "0.5rem", maxHeight: "120px" }}
+                />
+              )}
             </div>
 
             <div className="form-group">
@@ -501,16 +449,6 @@ const AddModels: React.FC = () => {
                 />
                 Does this model contains Diamonds ?
               </label>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Description</label>
-              <textarea
-                className="form-textarea"
-                placeholder="Brief model details..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
             </div>
 
             <div className="btn-group">

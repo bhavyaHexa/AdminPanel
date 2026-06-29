@@ -8,6 +8,7 @@ import { useUploadTextureAoEngrave } from '../hooks/useUploadTextureAoEngrave';
 import { useUploadTextureNormalBase } from '../hooks/useUploadTextureNormalBase';
 import { useUploadTextureNormalFinishing } from '../hooks/useUploadTextureNormalFinishing';
 import { useDeleteTexture } from '../hooks/useDeleteTexture';
+import { useUpdateTexture } from '../hooks/useUpdateTexture';
 import type { Texture } from '../types';
 
 const AddTextures: React.FC = () => {
@@ -15,6 +16,7 @@ const AddTextures: React.FC = () => {
 
   const createTexture = usePostTextures();
   const deleteTexture = useDeleteTexture();
+  const updateTexture = useUpdateTexture();
   const uploadGold = useUploadTextureAoGold();
   const uploadSilver = useUploadTextureAoSilver();
   const uploadEngrave = useUploadTextureAoEngrave();
@@ -102,6 +104,15 @@ const AddTextures: React.FC = () => {
     }
   };
 
+  const handleMapDelete = async (textureId: string, field: keyof Omit<Texture, 'id' | 'widthId'>) => {
+    try {
+      await updateTexture.mutateAsync({ id: textureId, data: { [field]: null } });
+      showStatus('Map deleted successfully!');
+    } catch (err: unknown) {
+      showStatus(String(err), 'error');
+    }
+  };
+
   const handleMapUpload = async (textureId: string, file: File, type: 'gold' | 'silver' | 'engrave' | 'normalBase' | 'normalFinishing') => {
     const formData = new FormData();
     formData.append('file', file);
@@ -109,10 +120,10 @@ const AddTextures: React.FC = () => {
     try {
       if (type === 'gold') {
         await uploadGold.mutateAsync({ id: textureId, formData });
-        showStatus('Gold Ambient Occlusion map uploaded successfully!');
+        showStatus('Base Metal AO map uploaded successfully!');
       } else if (type === 'silver') {
         await uploadSilver.mutateAsync({ id: textureId, formData });
-        showStatus('Silver Ambient Occlusion map uploaded successfully!');
+        showStatus('Finishing Metal AO map uploaded successfully!');
       } else if (type === 'engrave') {
         await uploadEngrave.mutateAsync({ id: textureId, formData });
         showStatus('Engrave Ambient Occlusion map uploaded successfully!');
@@ -218,6 +229,7 @@ const AddTextures: React.FC = () => {
   const isAnyActionPending = 
     createTexture.isPending || 
     deleteTexture.isPending || 
+    updateTexture.isPending || 
     uploadGold.isPending || 
     uploadSilver.isPending || 
     uploadEngrave.isPending || 
@@ -348,7 +360,20 @@ const AddTextures: React.FC = () => {
 
             {widthId && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1.5rem', background: 'rgba(0,0,0,0.15)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: '0 0 0.5rem 0' }}>Ambient Occlusion & Normal Maps</h3>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+                  <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Ambient Occlusion & Normal Maps</h3>
+                  {currentTexture?.id && (
+                    <button
+                      type="button"
+                      className="btn btn-danger-outline"
+                      style={{ padding: '0.35rem 0.7rem', fontSize: '0.8rem' }}
+                      onClick={() => handleDelete(currentTexture.id!)}
+                      disabled={deleteTexture.isPending}
+                    >
+                      Delete Selected Map
+                    </button>
+                  )}
+                </div>
                 
                 {isInheritedFromYellowGold ? (
                   <div 
@@ -368,98 +393,163 @@ const AddTextures: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    {/* Gold AO */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '0.85rem', color: currentTexture?.aoGold ? '#10b981' : 'var(--text-secondary)' }}>
-                        {currentTexture?.aoGold ? '✓ Gold AO Map Loaded' : '✗ Gold AO Map Missing'}
-                      </span>
-                      <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
-                        <span style={{ fontSize: '0.75rem' }}>Upload</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="file-upload-input"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleUploadClick(file, 'gold');
-                          }}
-                        />
+                    {/* Base Metal AO */}
+<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+              <span style={{ fontSize: '0.85rem', color: currentTexture?.aoGold ? '#10b981' : 'var(--text-secondary)' }}>
+                {currentTexture?.aoGold ? '✓ Base Metal AO Map Loaded' : '✗ Base Metal AO Map Missing'}
+              </span>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
+                  <span style={{ fontSize: '0.75rem' }}>Upload</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="file-upload-input"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUploadClick(file, 'gold');
+                    }}
+                  />
+                </div>
+                {currentTexture?.aoGold && currentTexture.id && (
+                  <button
+                    type="button"
+                    className="btn btn-danger-outline"
+                    style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem' }}
+                    onClick={() => handleMapDelete(currentTexture.id!, 'aoGold')}
+                    disabled={updateTexture.isPending}
+                  >
+                    Delete
+                  </button>
+                )}
                       </div>
                     </div>
 
-                    {/* Silver AO */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '0.85rem', color: currentTexture?.aoSilver ? '#10b981' : 'var(--text-secondary)' }}>
-                        {currentTexture?.aoSilver ? '✓ Silver AO Map Loaded' : '✗ Silver AO Map Missing'}
-                      </span>
-                      <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
-                        <span style={{ fontSize: '0.75rem' }}>Upload</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="file-upload-input"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleUploadClick(file, 'silver');
-                          }}
-                        />
+                    {/* Finishing Metal AO */}
+<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+              <span style={{ fontSize: '0.85rem', color: currentTexture?.aoSilver ? '#10b981' : 'var(--text-secondary)' }}>
+                {currentTexture?.aoSilver ? '✓ Finishing Metal AO Map Loaded' : '✗ Finishing Metal AO Map Missing'}
+              </span>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
+                  <span style={{ fontSize: '0.75rem' }}>Upload</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="file-upload-input"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUploadClick(file, 'silver');
+                    }}
+                  />
+                </div>
+                {currentTexture?.aoSilver && currentTexture.id && (
+                  <button
+                    type="button"
+                    className="btn btn-danger-outline"
+                    style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem' }}
+                    onClick={() => handleMapDelete(currentTexture.id!, 'aoSilver')}
+                    disabled={updateTexture.isPending}
+                  >
+                    Delete
+                  </button>
+                )}
                       </div>
                     </div>
 
                     {/* Engrave AO */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '0.85rem', color: currentTexture?.aoEngrave ? '#10b981' : 'var(--text-secondary)' }}>
-                        {currentTexture?.aoEngrave ? '✓ Engrave AO Map Loaded' : '✗ Engrave AO Map Missing'}
-                      </span>
-                      <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
-                        <span style={{ fontSize: '0.75rem' }}>Upload</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="file-upload-input"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleUploadClick(file, 'engrave');
-                          }}
-                        />
+<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+              <span style={{ fontSize: '0.85rem', color: currentTexture?.aoEngrave ? '#10b981' : 'var(--text-secondary)' }}>
+                {currentTexture?.aoEngrave ? '✓ Engrave AO Map Loaded' : '✗ Engrave AO Map Missing'}
+              </span>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
+                  <span style={{ fontSize: '0.75rem' }}>Upload</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="file-upload-input"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUploadClick(file, 'engrave');
+                    }}
+                  />
+                </div>
+                {currentTexture?.aoEngrave && currentTexture.id && (
+                  <button
+                    type="button"
+                    className="btn btn-danger-outline"
+                    style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem' }}
+                    onClick={() => handleMapDelete(currentTexture.id!, 'aoEngrave')}
+                    disabled={updateTexture.isPending}
+                  >
+                    Delete
+                  </button>
+                )}
                       </div>
                     </div>
 
                     {/* Normal Base */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '0.85rem', color: currentTexture?.normalBase ? '#10b981' : 'var(--text-secondary)' }}>
-                        {currentTexture?.normalBase ? '✓ Normal Base Map Loaded' : '✗ Normal Base Map Missing'}
-                      </span>
-                      <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
-                        <span style={{ fontSize: '0.75rem' }}>Upload</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="file-upload-input"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleUploadClick(file, 'normalBase');
-                          }}
-                        />
+<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+              <span style={{ fontSize: '0.85rem', color: currentTexture?.normalBase ? '#10b981' : 'var(--text-secondary)' }}>
+                {currentTexture?.normalBase ? '✓ Normal Base Map Loaded' : '✗ Normal Base Map Missing'}
+              </span>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
+                  <span style={{ fontSize: '0.75rem' }}>Upload</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="file-upload-input"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUploadClick(file, 'normalBase');
+                    }}
+                  />
+                </div>
+                {currentTexture?.normalBase && currentTexture.id && (
+                  <button
+                    type="button"
+                    className="btn btn-danger-outline"
+                    style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem' }}
+                    onClick={() => handleMapDelete(currentTexture.id!, 'normalBase')}
+                    disabled={updateTexture.isPending}
+                  >
+                    Delete
+                  </button>
+                )}
                       </div>
                     </div>
 
                     {/* Normal Finishing */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
                       <span style={{ fontSize: '0.85rem', color: currentTexture?.normalFinishing ? '#10b981' : 'var(--text-secondary)' }}>
                         {currentTexture?.normalFinishing ? '✓ Normal Finishing Map Loaded' : '✗ Normal Finishing Map Missing'}
                       </span>
-                      <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
-                        <span style={{ fontSize: '0.75rem' }}>Upload</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="file-upload-input"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleUploadClick(file, 'normalFinishing');
-                          }}
-                        />
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
+                          <span style={{ fontSize: '0.75rem' }}>Upload</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="file-upload-input"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleUploadClick(file, 'normalFinishing');
+                            }}
+                          />
+                        </div>
+                        {currentTexture?.normalFinishing && currentTexture.id && (
+                          <button
+                            type="button"
+                            className="btn btn-danger-outline"
+                            style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem' }}
+                            onClick={() => handleMapDelete(currentTexture.id!, 'normalFinishing')}
+                            disabled={updateTexture.isPending}
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </div>
                   </>
@@ -581,10 +671,10 @@ const AddTextures: React.FC = () => {
 
                   {/* Upload and Status grids for texture maps */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem', background: 'rgba(0,0,0,0.15)', padding: '0.75rem', borderRadius: '8px' }}>
-                    {/* Gold AO */}
+                    {/* Base Metal AO */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: '0.8rem', color: texture.aoGold ? '#10b981' : 'var(--text-secondary)' }}>
-                        {texture.aoGold ? '✓ Gold AO Map Loaded' : '✗ Gold AO Map Missing'}
+                        {texture.aoGold ? '✓ Base Metal AO Map Loaded' : '✗ Base Metal AO Map Missing'}
                       </span>
                       <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
                         <span style={{ fontSize: '0.75rem' }}>Upload</span>
@@ -600,10 +690,10 @@ const AddTextures: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Silver AO */}
+                    {/* Finishing Metal AO */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: '0.8rem', color: texture.aoSilver ? '#10b981' : 'var(--text-secondary)' }}>
-                        {texture.aoSilver ? '✓ Silver AO Map Loaded' : '✗ Silver AO Map Missing'}
+                        {texture.aoSilver ? '✓ Finishing Metal AO Map Loaded' : '✗ Finishing Metal AO Map Missing'}
                       </span>
                       <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
                         <span style={{ fontSize: '0.75rem' }}>Upload</span>

@@ -30,7 +30,6 @@ const AddColors: React.FC = () => {
   const [name, setName] = useState('Yellow Gold');
   const [hex, setHex] = useState('#ffc35c');
   const [sku, setSku] = useState('');
-  const [description, setDescription] = useState('');
   const [filterModelId, setFilterModelId] = useState('');
   const [swatchFile, setSwatchFile] = useState<File | null>(null);
   const [swatchPreviewUrl, setSwatchPreviewUrl] = useState('');
@@ -89,7 +88,6 @@ const AddColors: React.FC = () => {
       name,
       hex,
       sku,
-      description: description || null,
       modelId,
     };
 
@@ -125,7 +123,6 @@ const AddColors: React.FC = () => {
     setName(color.name);
     setHex(color.hex);
     setSku(color.sku);
-    setDescription(color.description || '');
     setModelId(color.modelId);
   };
 
@@ -189,7 +186,6 @@ const AddColors: React.FC = () => {
     setName('Yellow Gold');
     setHex('#ffc35c');
     setSku('');
-    setDescription('');
     setSwatchFile(null);
     setSwatchPreviewUrl('');
   };
@@ -368,16 +364,6 @@ const AddColors: React.FC = () => {
                   required
                 />
               </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Description</label>
-              <textarea
-                className="form-textarea"
-                placeholder="Color specific information..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
             </div>
 
             <div className="btn-group">

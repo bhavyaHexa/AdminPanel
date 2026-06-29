@@ -5,7 +5,6 @@ import Loader from './Loader';
 import { useUpdateCollection } from '../hooks/useUpdateCollection';
 import { useDeleteCollection } from '../hooks/useDeleteCollection';
 import { useUploadCollectionImage } from '../hooks/useUploadCollectionImage';
-import { useUploadCollectionPreview } from '../hooks/useUploadCollectionPreview';
 import { useDeleteModel } from '../hooks/useDeleteModel';
 import { useDeleteColor } from '../hooks/useDeleteColor';
 import { useDeleteWidth } from '../hooks/useDeleteWidth';
@@ -26,15 +25,12 @@ const AddCollection: React.FC = () => {
   const deleteTexture = useDeleteTexture();
   const deleteAsset3D = useDeleteAsset3D();
   const uploadImage = useUploadCollectionImage();
-  const uploadPreview = useUploadCollectionPreview();
 
   const [name, setName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string>('');
-  const [previewFile, setPreviewFile] = useState<File | null>(null);
-  const [previewPreviewUrl, setPreviewPreviewUrl] = useState<string>('');
 
   const showStatus = (text: string, type: 'success' | 'error' = 'success') => {
     setStatusMsg({ type, text });
@@ -66,11 +62,6 @@ const AddCollection: React.FC = () => {
           formData.append('file', coverFile);
           await uploadImage.mutateAsync({ id: editingId, formData });
         }
-        if (previewFile) {
-          const formData = new FormData();
-          formData.append('file', previewFile);
-          await uploadPreview.mutateAsync({ id: editingId, formData });
-        }
         showStatus('Collection updated successfully!');
       } else {
         const created = await createCollection.mutateAsync({ name });
@@ -80,11 +71,6 @@ const AddCollection: React.FC = () => {
             const formData = new FormData();
             formData.append('file', coverFile);
             await uploadImage.mutateAsync({ id: collectionId, formData });
-          }
-          if (previewFile) {
-            const formData = new FormData();
-            formData.append('file', previewFile);
-            await uploadPreview.mutateAsync({ id: collectionId, formData });
           }
         }
         showStatus('Collection created successfully!');
@@ -102,8 +88,6 @@ const AddCollection: React.FC = () => {
     setName(collection.name);
     setCoverFile(null);
     setCoverPreviewUrl(collection.image || '');
-    setPreviewFile(null);
-    setPreviewPreviewUrl(collection.preview_url || '');
   };
 
   const handleDelete = async (collection: Collection) => {
@@ -168,8 +152,6 @@ const AddCollection: React.FC = () => {
     setName('');
     setCoverFile(null);
     setCoverPreviewUrl('');
-    setPreviewFile(null);
-    setPreviewPreviewUrl('');
   };
 
   const isAnyActionPending = 
@@ -177,8 +159,7 @@ const AddCollection: React.FC = () => {
     createCollection.isPending || 
     updateCollection.isPending || 
     deleteCollection.isPending || 
-    uploadImage.isPending || 
-    uploadPreview.isPending;
+    uploadImage.isPending;
 
   return (
     <div>
@@ -187,7 +168,7 @@ const AddCollection: React.FC = () => {
           message={
             deleteCollection.isPending
               ? "Deleting collection..."
-              : uploadImage.isPending || uploadPreview.isPending
+              : uploadImage.isPending
               ? "Uploading graphics..."
               : "Saving collection..."
           }
@@ -231,116 +212,59 @@ const AddCollection: React.FC = () => {
               />
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Cover Image</label>
-                <div className="file-upload-zone" style={{ minHeight: '80px' }}>
-                  <span className="file-upload-text">Select cover image</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="file-upload-input"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setCoverFile(file);
-                        setCoverPreviewUrl(URL.createObjectURL(file));
-                      }
-                    }}
-                  />
-                </div>
-                {coverPreviewUrl && (
-                  <div style={{ marginTop: '0.5rem', position: 'relative', display: 'inline-block' }}>
-                    <img
-                      src={coverPreviewUrl}
-                      alt="Cover Preview"
-                      style={{ maxHeight: '120px', borderRadius: '8px' }}
-                    />
-                    <button
-                      type="button"
-                      style={{
-                        position: 'absolute',
-                        top: '4px',
-                        right: '4px',
-                        background: 'rgba(0,0,0,0.6)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '50%',
-                        width: '20px',
-                        height: '20px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.8rem',
-                        lineHeight: '1',
-                        padding: 0,
-                      }}
-                      onClick={() => {
-                        setCoverFile(null);
-                        setCoverPreviewUrl('');
-                      }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                )}
+            <div className="form-group">
+              <label className="form-label">Cover Image</label>
+              <div className="file-upload-zone" style={{ minHeight: '80px' }}>
+                <span className="file-upload-text">Select cover image</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="file-upload-input"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setCoverFile(file);
+                      setCoverPreviewUrl(URL.createObjectURL(file));
+                    }
+                  }}
+                />
               </div>
-
-              <div className="form-group">
-                <label className="form-label">Preview Image</label>
-                <div className="file-upload-zone" style={{ minHeight: '80px' }}>
-                  <span className="file-upload-text">Select preview image</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="file-upload-input"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setPreviewFile(file);
-                        setPreviewPreviewUrl(URL.createObjectURL(file));
-                      }
-                    }}
+              {coverPreviewUrl && (
+                <div style={{ marginTop: '0.5rem', position: 'relative', display: 'inline-block' }}>
+                  <img
+                    src={coverPreviewUrl}
+                    alt="Cover Preview"
+                    style={{ maxHeight: '120px', borderRadius: '8px' }}
                   />
+                  <button
+                    type="button"
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      background: 'rgba(0,0,0,0.6)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '20px',
+                      height: '20px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.8rem',
+                      lineHeight: '1',
+                      padding: 0,
+                    }}
+                    onClick={() => {
+                      setCoverFile(null);
+                      setCoverPreviewUrl('');
+                    }}
+                  >
+                    ×
+                  </button>
                 </div>
-                {previewPreviewUrl && (
-                  <div style={{ marginTop: '0.5rem', position: 'relative', display: 'inline-block' }}>
-                    <img
-                      src={previewPreviewUrl}
-                      alt="Preview Preview"
-                      style={{ maxHeight: '120px', borderRadius: '8px' }}
-                    />
-                    <button
-                      type="button"
-                      style={{
-                        position: 'absolute',
-                        top: '4px',
-                        right: '4px',
-                        background: 'rgba(0,0,0,0.6)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '50%',
-                        width: '20px',
-                        height: '20px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.8rem',
-                        lineHeight: '1',
-                        padding: 0,
-                      }}
-                      onClick={() => {
-                        setPreviewFile(null);
-                        setPreviewPreviewUrl('');
-                      }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
 
             <div className="btn-group">
