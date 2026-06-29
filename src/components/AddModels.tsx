@@ -321,6 +321,8 @@ const AddModels: React.FC = () => {
                   <option value="Yellow Gold">Yellow Gold</option>
                   <option value="White Gold">White Gold</option>
                   <option value="Rose Gold">Rose Gold</option>
+                  <option value="Yellow-Yellow Gold">Yellow-Yellow Gold</option>
+                  <option value="White-White Gold">White-White Gold</option>
                 </select>
               </div>
               <div className="form-group">
@@ -333,6 +335,8 @@ const AddModels: React.FC = () => {
                   <option value="Yellow Gold">Yellow Gold</option>
                   <option value="White Gold">White Gold</option>
                   <option value="Rose Gold">Rose Gold</option>
+                  <option value="Yellow-Yellow Gold">Yellow-Yellow Gold</option>
+                  <option value="White-White Gold">White-White Gold</option>
                 </select>
               </div>
               <div className="form-group">
@@ -345,6 +349,8 @@ const AddModels: React.FC = () => {
                   <option value="Yellow Gold">Yellow Gold</option>
                   <option value="White Gold">White Gold</option>
                   <option value="Rose Gold">Rose Gold</option>
+                  <option value="Yellow-Yellow Gold">Yellow-Yellow Gold</option>
+                  <option value="White-White Gold">White-White Gold</option>
                 </select>
               </div>
             </div>
