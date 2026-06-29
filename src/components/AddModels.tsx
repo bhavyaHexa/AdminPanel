@@ -27,12 +27,20 @@ const AddModels: React.FC = () => {
   const deleteAsset3D = useDeleteAsset3D();
   const uploadImage = useUploadModelImage();
 
+  const formatMetalColor = (val?: string) => {
+    if (!val) return "N/A";
+    return val.replace(":", " (") + (val.includes(":") ? ")" : "");
+  };
+
   // Form State
   const [collectionId, setCollectionId] = useState("");
   const [name, setName] = useState("");
   const [baseMetalColor, setBaseMetalColor] = useState("Yellow Gold");
+  const [baseMetalColorTone, setBaseMetalColorTone] = useState("Yellow");
   const [finishingMetalColor, setFinishingMetalColor] = useState("Yellow Gold");
+  const [finishingMetalColorTone, setFinishingMetalColorTone] = useState("Yellow");
   const [engravingMeshColor, setEngravingMeshColor] = useState("Yellow Gold");
+  const [engravingMeshColorTone, setEngravingMeshColorTone] = useState("Yellow");
   const [isDiamonds, setIsDiamonds] = useState(false);
 
   // colorChange checkboxes state
@@ -71,11 +79,23 @@ const AddModels: React.FC = () => {
     if (colorChangeFinishing) colorChange.push("finishing_metal_color");
     if (colorChangeEngraving) colorChange.push("engraving_mesh_color");
 
+    const finalBaseColor = (baseMetalColor === "Yellow-White Gold" || baseMetalColor === "Rose-White Gold")
+      ? `${baseMetalColor}:${baseMetalColorTone}`
+      : baseMetalColor;
+
+    const finalFinishingColor = (finishingMetalColor === "Yellow-White Gold" || finishingMetalColor === "Rose-White Gold")
+      ? `${finishingMetalColor}:${finishingMetalColorTone}`
+      : finishingMetalColor;
+
+    const finalEngravingColor = (engravingMeshColor === "Yellow-White Gold" || engravingMeshColor === "Rose-White Gold")
+      ? `${engravingMeshColor}:${engravingMeshColorTone}`
+      : engravingMeshColor;
+
     const modelPayload: Partial<Model> = {
       name,
-      base_metal_color: baseMetalColor,
-      finishing_metal_color: finishingMetalColor,
-      engraving_mesh_color: engravingMeshColor,
+      base_metal_color: finalBaseColor,
+      finishing_metal_color: finalFinishingColor,
+      engraving_mesh_color: finalEngravingColor,
       colorChange,
       isDiamonds,
       collectionId,
@@ -124,9 +144,58 @@ const AddModels: React.FC = () => {
     if (!model.id) return;
     setEditingId(model.id);
     setName(model.name);
-    setBaseMetalColor(model.base_metal_color);
-    setFinishingMetalColor(model.finishing_metal_color);
-    setEngravingMeshColor(model.engraving_mesh_color);
+
+    // Parse Base Metal Color
+    const baseColorVal = model.base_metal_color || "Yellow Gold";
+    if (baseColorVal.includes(":")) {
+      const [color, tone] = baseColorVal.split(":");
+      setBaseMetalColor(color);
+      setBaseMetalColorTone(tone);
+    } else {
+      setBaseMetalColor(baseColorVal);
+      if (baseColorVal === "Yellow-White Gold") {
+        setBaseMetalColorTone("Yellow");
+      } else if (baseColorVal === "Rose-White Gold") {
+        setBaseMetalColorTone("Rose");
+      } else {
+        setBaseMetalColorTone("Yellow");
+      }
+    }
+
+    // Parse Finishing Metal Color
+    const finishingColorVal = model.finishing_metal_color || "Yellow Gold";
+    if (finishingColorVal.includes(":")) {
+      const [color, tone] = finishingColorVal.split(":");
+      setFinishingMetalColor(color);
+      setFinishingMetalColorTone(tone);
+    } else {
+      setFinishingMetalColor(finishingColorVal);
+      if (finishingColorVal === "Yellow-White Gold") {
+        setFinishingMetalColorTone("Yellow");
+      } else if (finishingColorVal === "Rose-White Gold") {
+        setFinishingMetalColorTone("Rose");
+      } else {
+        setFinishingMetalColorTone("Yellow");
+      }
+    }
+
+    // Parse Engraving Mesh Color
+    const engravingColorVal = model.engraving_mesh_color || "Yellow Gold";
+    if (engravingColorVal.includes(":")) {
+      const [color, tone] = engravingColorVal.split(":");
+      setEngravingMeshColor(color);
+      setEngravingMeshColorTone(tone);
+    } else {
+      setEngravingMeshColor(engravingColorVal);
+      if (engravingColorVal === "Yellow-White Gold") {
+        setEngravingMeshColorTone("Yellow");
+      } else if (engravingColorVal === "Rose-White Gold") {
+        setEngravingMeshColorTone("Rose");
+      } else {
+        setEngravingMeshColorTone("Yellow");
+      }
+    }
+
     setIsDiamonds(model.isDiamonds);
     setCollectionId(model.collectionId);
 
@@ -218,8 +287,11 @@ const AddModels: React.FC = () => {
     setEditingId(null);
     setName("");
     setBaseMetalColor("Yellow Gold");
+    setBaseMetalColorTone("Yellow");
     setFinishingMetalColor("Yellow Gold");
+    setFinishingMetalColorTone("Yellow");
     setEngravingMeshColor("Yellow Gold");
+    setEngravingMeshColorTone("Yellow");
     setIsDiamonds(false);
     setColorChangeBase(true);
     setColorChangeFinishing(true);
@@ -316,7 +388,12 @@ const AddModels: React.FC = () => {
                 <select
                   className="form-select"
                   value={baseMetalColor}
-                  onChange={(e) => setBaseMetalColor(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setBaseMetalColor(val);
+                    if (val === "Yellow-White Gold") setBaseMetalColorTone("Yellow");
+                    else if (val === "Rose-White Gold") setBaseMetalColorTone("Rose");
+                  }}
                 >
                   <option value="Yellow Gold">Yellow Gold</option>
                   <option value="Yellow-White Gold">Yellow-White Gold</option>
@@ -324,13 +401,41 @@ const AddModels: React.FC = () => {
                   <option value="Rose-White Gold">Rose-White Gold</option>
                   <option value="Rose Gold">Rose Gold</option>
                 </select>
+                {(baseMetalColor === "Yellow-White Gold" || baseMetalColor === "Rose-White Gold") && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <label className="form-label" style={{ fontSize: '0.75rem', color: '#10b981' }}>Base Tone Option</label>
+                    <select
+                      className="form-select"
+                      style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }}
+                      value={baseMetalColorTone}
+                      onChange={(e) => setBaseMetalColorTone(e.target.value)}
+                    >
+                      {baseMetalColor === "Yellow-White Gold" ? (
+                        <>
+                          <option value="Yellow">Yellow</option>
+                          <option value="White">White</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="Rose">Rose</option>
+                          <option value="White">White</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                )}
               </div>
               <div className="form-group">
                 <label className="form-label">Finishing Metal Color</label>
                 <select
                   className="form-select"
                   value={finishingMetalColor}
-                  onChange={(e) => setFinishingMetalColor(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFinishingMetalColor(val);
+                    if (val === "Yellow-White Gold") setFinishingMetalColorTone("Yellow");
+                    else if (val === "Rose-White Gold") setFinishingMetalColorTone("Rose");
+                  }}
                 >
                   <option value="Yellow Gold">Yellow Gold</option>
                   <option value="Yellow-White Gold">Yellow-White Gold</option>
@@ -338,13 +443,41 @@ const AddModels: React.FC = () => {
                   <option value="Rose-White Gold">Rose-White Gold</option>
                   <option value="Rose Gold">Rose Gold</option>
                 </select>
+                {(finishingMetalColor === "Yellow-White Gold" || finishingMetalColor === "Rose-White Gold") && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <label className="form-label" style={{ fontSize: '0.75rem', color: '#10b981' }}>Finishing Tone Option</label>
+                    <select
+                      className="form-select"
+                      style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }}
+                      value={finishingMetalColorTone}
+                      onChange={(e) => setFinishingMetalColorTone(e.target.value)}
+                    >
+                      {finishingMetalColor === "Yellow-White Gold" ? (
+                        <>
+                          <option value="Yellow">Yellow</option>
+                          <option value="White">White</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="Rose">Rose</option>
+                          <option value="White">White</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                )}
               </div>
               <div className="form-group">
                 <label className="form-label">Engraving Mesh Color</label>
                 <select
                   className="form-select"
                   value={engravingMeshColor}
-                  onChange={(e) => setEngravingMeshColor(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEngravingMeshColor(val);
+                    if (val === "Yellow-White Gold") setEngravingMeshColorTone("Yellow");
+                    else if (val === "Rose-White Gold") setEngravingMeshColorTone("Rose");
+                  }}
                 >
                   <option value="Yellow Gold">Yellow Gold</option>
                   <option value="Yellow-White Gold">Yellow-White Gold</option>
@@ -352,6 +485,29 @@ const AddModels: React.FC = () => {
                   <option value="Rose-White Gold">Rose-White Gold</option>
                   <option value="Rose Gold">Rose Gold</option>
                 </select>
+                {(engravingMeshColor === "Yellow-White Gold" || engravingMeshColor === "Rose-White Gold") && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <label className="form-label" style={{ fontSize: '0.75rem', color: '#10b981' }}>Engraving Tone Option</label>
+                    <select
+                      className="form-select"
+                      style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem' }}
+                      value={engravingMeshColorTone}
+                      onChange={(e) => setEngravingMeshColorTone(e.target.value)}
+                    >
+                      {engravingMeshColor === "Yellow-White Gold" ? (
+                        <>
+                          <option value="Yellow">Yellow</option>
+                          <option value="White">White</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="Rose">Rose</option>
+                          <option value="White">White</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -585,6 +741,12 @@ const AddModels: React.FC = () => {
                               >
                                 {model.colors?.length || 0} Colors configured{" "}
                                 {model.isDiamonds ? "• 💎 Diamonds" : ""}
+                              </p>
+                              <p
+                                className="list-item-subtitle"
+                                style={{ fontSize: "0.7rem", marginTop: "2px", color: "rgba(255, 255, 255, 0.45)" }}
+                              >
+                                Base: {formatMetalColor(model.base_metal_color)} | Finishing: {formatMetalColor(model.finishing_metal_color)} | Engraving: {formatMetalColor(model.engraving_mesh_color)}
                               </p>
                             </div>
                           </div>
