@@ -38,11 +38,11 @@ const AddColors: React.FC = () => {
 
   const loadPredefinedSwatch = async (colorName: string) => {
     let filename = '';
-    if (colorName === 'Yellow Gold' || colorName === 'Yellow-Yellow Gold') {
+    if (colorName === 'Yellow Gold' || colorName === 'Yellow-White Gold') {
       filename = 'YellowGold.png';
-    } else if (colorName === 'White Gold' || colorName === 'White-White Gold') {
+    } else if (colorName === 'White Gold') {
       filename = 'WhiteGold.png';
-    } else if (colorName === 'Rose Gold') {
+    } else if (colorName === 'Rose Gold' || colorName === 'Rose-White Gold') {
       filename = 'RoseGold.png';
     }
 
@@ -282,21 +282,21 @@ const AddColors: React.FC = () => {
                 onChange={(e) => {
                   const val = e.target.value;
                   setName(val);
-                  if (val === 'Yellow Gold' || val === 'Yellow-Yellow Gold') {
+                  if (val === 'Yellow Gold' || val === 'Yellow-White Gold') {
                     setHex('#ffc35c');
-                  } else if (val === 'White Gold' || val === 'White-White Gold') {
+                  } else if (val === 'White Gold') {
                     setHex('#f6f5f5');
-                  } else if (val === 'Rose Gold') {
+                  } else if (val === 'Rose Gold' || val === 'Rose-White Gold') {
                     setHex('#e8a274');
                   }
                 }}
                 required
               >
                 <option value="Yellow Gold">Yellow Gold</option>
+                <option value="Yellow-White Gold">Yellow-White Gold</option>
                 <option value="White Gold">White Gold</option>
+                <option value="Rose-White Gold">Rose-White Gold</option>
                 <option value="Rose Gold">Rose Gold</option>
-                <option value="Yellow-Yellow Gold">Yellow-Yellow Gold</option>
-                <option value="White-White Gold">White-White Gold</option>
               </select>
             </div>
 
