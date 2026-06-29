@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import useGetAllCollections from '../hooks/useGetAllCollections';
 import usePostCollection from '../hooks/usePostCollection';
+import Loader from './Loader';
 import { useUpdateCollection } from '../hooks/useUpdateCollection';
 import { useDeleteCollection } from '../hooks/useDeleteCollection';
 import { useUploadCollectionImage } from '../hooks/useUploadCollectionImage';
@@ -171,8 +172,27 @@ const AddCollection: React.FC = () => {
     setPreviewPreviewUrl('');
   };
 
+  const isAnyActionPending = 
+    isLoading ||
+    createCollection.isPending || 
+    updateCollection.isPending || 
+    deleteCollection.isPending || 
+    uploadImage.isPending || 
+    uploadPreview.isPending;
+
   return (
     <div>
+      {isAnyActionPending && (
+        <Loader 
+          message={
+            deleteCollection.isPending
+              ? "Deleting collection..."
+              : uploadImage.isPending || uploadPreview.isPending
+              ? "Uploading graphics..."
+              : "Saving collection..."
+          }
+        />
+      )}
       <div className="dashboard-header">
         <h1 className="dashboard-title">Collections Management</h1>
         <p className="dashboard-subtitle">Manage collections, upload graphics, and link models.</p>

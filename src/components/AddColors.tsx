@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import useGetAllModels from '../hooks/useGetAllModels';
 import useGetAllCollections from '../hooks/useGetAllCollections';
+import Loader from './Loader';
 import usePostColors from '../hooks/usePostColors';
 import { useUpdateColor } from '../hooks/useUpdateColor';
 import { useDeleteColor } from '../hooks/useDeleteColor';
@@ -35,6 +36,34 @@ const AddColors: React.FC = () => {
   const [swatchPreviewUrl, setSwatchPreviewUrl] = useState('');
 
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const loadPredefinedSwatch = async (colorName: string) => {
+    let filename = '';
+    if (colorName === 'Yellow Gold') {
+      filename = 'YellowGold.png';
+    } else if (colorName === 'White Gold') {
+      filename = 'WhiteGold.png';
+    } else if (colorName === 'Rose Gold') {
+      filename = 'RoseGold.png';
+    }
+
+    if (filename) {
+      try {
+        const response = await fetch(`/${filename}`);
+        const blob = await response.blob();
+        const file = new File([blob], filename, { type: 'image/png' });
+        setSwatchFile(file);
+        setSwatchPreviewUrl(`/${filename}`);
+      } catch (err) {
+        console.error('Error fetching predefined swatch image:', err);
+      }
+    }
+  };
+
+  // Load predefined swatch image when name or editing state changes
+  React.useEffect(() => {
+    loadPredefinedSwatch(name);
+  }, [name, editingId]);
 
   // Sync filter when parent model is selected in the form
   React.useEffect(() => {
@@ -98,8 +127,6 @@ const AddColors: React.FC = () => {
     setSku(color.sku);
     setDescription(color.description || '');
     setModelId(color.modelId);
-    setSwatchFile(null);
-    setSwatchPreviewUrl(color.image || '');
   };
 
   const handleDelete = async (id: string) => {
@@ -186,8 +213,25 @@ const AddColors: React.FC = () => {
     }
   });
 
+  const isAnyActionPending = 
+    createColor.isPending || 
+    updateColor.isPending || 
+    deleteColor.isPending || 
+    uploadImage.isPending;
+
   return (
     <div>
+      {isAnyActionPending && (
+        <Loader 
+          message={
+            deleteColor.isPending
+              ? "Deleting color variant..."
+              : uploadImage.isPending
+              ? "Uploading graphics..."
+              : "Saving color variant..."
+          }
+        />
+      )}
       <div className="dashboard-header">
         <h1 className="dashboard-title">Colors Management</h1>
         <p className="dashboard-subtitle">Configure color options (swatches, hex, SKU codes) for existing 3D models.</p>
@@ -280,55 +324,35 @@ const AddColors: React.FC = () => {
                 </div>
 
                 <label className="form-label" style={{ marginTop: '1rem' }}>Swatch Image</label>
-                <div className="file-upload-zone" style={{ minHeight: '80px' }}>
-                  <span className="file-upload-text">Select swatch image</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="file-upload-input"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setSwatchFile(file);
-                        setSwatchPreviewUrl(URL.createObjectURL(file));
-                      }
-                    }}
-                  />
-                </div>
-                {swatchPreviewUrl && (
-                  <div style={{ marginTop: '0.5rem', position: 'relative', display: 'inline-block' }}>
+                {swatchPreviewUrl ? (
+                  <div style={{ 
+                    marginTop: '0.5rem', 
+                    position: 'relative', 
+                    display: 'inline-block',
+                    padding: '8px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                  }}>
                     <img
                       src={swatchPreviewUrl}
                       alt="Swatch Preview"
-                      style={{ maxHeight: '120px', borderRadius: '8px' }}
+                      style={{ maxHeight: '120px', borderRadius: '8px', display: 'block' }}
                     />
-                    <button
-                      type="button"
-                      style={{
-                        position: 'absolute',
-                        top: '4px',
-                        right: '4px',
-                        background: 'rgba(0,0,0,0.6)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '50%',
-                        width: '20px',
-                        height: '20px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.8rem',
-                        lineHeight: '1',
-                        padding: 0,
-                      }}
-                      onClick={() => {
-                        setSwatchFile(null);
-                        setSwatchPreviewUrl('');
-                      }}
-                    >
-                      ×
-                    </button>
+                    <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '0.5rem', textAlign: 'center' }}>
+                      Predefined {name} swatch
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ 
+                    padding: '1rem', 
+                    background: 'rgba(255, 255, 255, 0.05)', 
+                    borderRadius: '12px', 
+                    border: '1px dashed rgba(255, 255, 255, 0.15)',
+                    textAlign: 'center',
+                    color: '#9ca3af'
+                  }}>
+                    Loading predefined swatch...
                   </div>
                 )}
               </div>

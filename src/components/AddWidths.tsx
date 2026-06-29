@@ -6,7 +6,25 @@ import { useDeleteWidth } from '../hooks/useDeleteWidth';
 import { useDeletePriceList } from '../hooks/useDeletePriceList';
 import { useDeleteTexture } from '../hooks/useDeleteTexture';
 import { useDeleteAsset3D } from '../hooks/useDeleteAsset3D';
+import usePostPrices from '../hooks/usePostPrices';
+import { useUpdatePriceList } from '../hooks/useUpdatePriceList';
 import type { Width, Color } from '../types';
+import Loader from './Loader';
+
+interface PriceGridRow {
+  widthId: string;
+  widthValue: string;
+  isDiamonds: boolean;
+  p18kId: string | null;
+  p18kSmaller: string;
+  p18kBigger: string;
+  p14kId: string | null;
+  p14kSmaller: string;
+  p14kBigger: string;
+  p9kId: string | null;
+  p9kSmaller: string;
+  p9kBigger: string;
+}
 
 const AddWidths: React.FC = () => {
   const { data: collections = [] } = useGetAllCollections();
@@ -17,12 +35,20 @@ const AddWidths: React.FC = () => {
   const deletePriceList = useDeletePriceList();
   const deleteTexture = useDeleteTexture();
   const deleteAsset3D = useDeleteAsset3D();
+  const createPrice = usePostPrices();
+  const updatePrice = useUpdatePriceList();
 
   // Form State
   const [selectedCollectionId, setSelectedCollectionId] = useState('');
   const [selectedModelId, setSelectedModelId] = useState('');
   const [colorId, setColorId] = useState('');
-  const [value, setValue] = useState('2.5');
+  const [inputValue, setInputValue] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Price Grid State
+  const [priceGrid, setPriceGrid] = useState<PriceGridRow[]>([]);
+  const [activeCaratTab, setActiveCaratTab] = useState<'18K' | '14K' | '9K'>('18K');
+  const [savingPrices, setSavingPrices] = useState(false);
 
   // Derived options based on granular selection
   const selectedCollection = collections.find((c) => c.id === selectedCollectionId);
@@ -30,7 +56,6 @@ const AddWidths: React.FC = () => {
   const selectedModel = modelsOptions.find((m) => m.id === selectedModelId);
   const colorsOptions = selectedModel?.colors || [];
 
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const showStatus = (text: string, type: 'success' | 'error' = 'success') => {
@@ -38,48 +63,200 @@ const AddWidths: React.FC = () => {
     setTimeout(() => setStatusMsg(null), 4000);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!value.trim() || !colorId) {
-      showStatus('Please specify Width Value and Color Variant', 'error');
+  // Sync the price grid whenever colorId or collections changes
+  React.useEffect(() => {
+    if (!colorId) {
+      setPriceGrid([]);
       return;
     }
 
-    const isDuplicate = widthsList.some(
-      (w) => w.width.colorId === colorId && w.width.value.trim() === value.trim() && w.width.id !== editingId
-    );
-    if (isDuplicate) {
-      alert('Width already created');
-      showStatus('Width already created', 'error');
-      return;
-    }
-
-    const widthPayload: Partial<Width> = {
-      value,
-      colorId,
-    };
-
-    try {
-      if (editingId) {
-        await updateWidth.mutateAsync({ id: editingId, data: widthPayload });
-        showStatus('Width dimension updated successfully!');
-      } else {
-        await createWidth.mutateAsync(widthPayload);
-        showStatus('Width dimension created successfully!');
+    let foundColor: Color | undefined;
+    for (const col of collections) {
+      for (const mod of col.models || []) {
+        const c = mod.colors?.find(color => color.id === colorId);
+        if (c) {
+          foundColor = c;
+          break;
+        }
       }
-      handleCancel();
+      if (foundColor) break;
+    }
+
+    if (foundColor && foundColor.widths) {
+      const gridRows: PriceGridRow[] = foundColor.widths.map(w => {
+        const p18 = w.priceLists?.find(p => p.carat.toUpperCase() === '18K');
+        const p14 = w.priceLists?.find(p => p.carat.toUpperCase() === '14K');
+        const p9 = w.priceLists?.find(p => p.carat.toUpperCase() === '9K');
+
+        return {
+          widthId: w.id || '',
+          widthValue: w.value,
+          isDiamonds: p18?.isDiamonds || p14?.isDiamonds || p9?.isDiamonds || false,
+          p18kId: p18?.id || null,
+          p18kSmaller: p18?.smallerSizePrice || '',
+          p18kBigger: p18?.biggerSizePrice || '',
+          p14kId: p14?.id || null,
+          p14kSmaller: p14?.smallerSizePrice || '',
+          p14kBigger: p14?.biggerSizePrice || '',
+          p9kId: p9?.id || null,
+          p9kSmaller: p9?.smallerSizePrice || '',
+          p9kBigger: p9?.biggerSizePrice || '',
+        };
+      });
+      // Sort rows numerically ascending by width value
+      gridRows.sort((a, b) => parseFloat(a.widthValue) - parseFloat(b.widthValue));
+      setPriceGrid(gridRows);
+    } else {
+      setPriceGrid([]);
+    }
+  }, [colorId, collections]);
+
+  const handleGridChange = (
+    widthId: string,
+    field: 'isDiamonds' | 'smaller' | 'bigger',
+    carat: '18K' | '14K' | '9K',
+    val: any
+  ) => {
+    setPriceGrid(prev => prev.map(row => {
+      if (row.widthId !== widthId) return row;
+      const updated = { ...row };
+      if (field === 'isDiamonds') {
+        updated.isDiamonds = val;
+      } else if (carat === '18K') {
+        if (field === 'smaller') updated.p18kSmaller = val;
+        if (field === 'bigger') updated.p18kBigger = val;
+      } else if (carat === '14K') {
+        if (field === 'smaller') updated.p14kSmaller = val;
+        if (field === 'bigger') updated.p14kBigger = val;
+      } else if (carat === '9K') {
+        if (field === 'smaller') updated.p9kSmaller = val;
+        if (field === 'bigger') updated.p9kBigger = val;
+      }
+      return updated;
+    }));
+  };
+
+  const handleSavePrices = async () => {
+    if (priceGrid.length === 0) return;
+    setSavingPrices(true);
+    try {
+      showStatus('Saving prices for all widths... Please wait.', 'success');
+      for (const row of priceGrid) {
+        // Save 18k Price
+        if (row.p18kSmaller.trim() || row.p18kBigger.trim()) {
+          const payload = {
+            widthId: row.widthId,
+            carat: '18K',
+            isDiamonds: row.isDiamonds,
+            smallerSizePrice: row.p18kSmaller || '0',
+            biggerSizePrice: row.p18kBigger || '0',
+          };
+          if (row.p18kId) {
+            await updatePrice.mutateAsync({ id: row.p18kId, data: payload });
+          } else {
+            await createPrice.mutateAsync(payload);
+          }
+        }
+
+        // Save 14k Price
+        if (row.p14kSmaller.trim() || row.p14kBigger.trim()) {
+          const payload = {
+            widthId: row.widthId,
+            carat: '14K',
+            isDiamonds: row.isDiamonds,
+            smallerSizePrice: row.p14kSmaller || '0',
+            biggerSizePrice: row.p14kBigger || '0',
+          };
+          if (row.p14kId) {
+            await updatePrice.mutateAsync({ id: row.p14kId, data: payload });
+          } else {
+            await createPrice.mutateAsync(payload);
+          }
+        }
+
+        // Save 9k Price
+        if (row.p9kSmaller.trim() || row.p9kBigger.trim()) {
+          const payload = {
+            widthId: row.widthId,
+            carat: '9K',
+            isDiamonds: row.isDiamonds,
+            smallerSizePrice: row.p9kSmaller || '0',
+            biggerSizePrice: row.p9kBigger || '0',
+          };
+          if (row.p9kId) {
+            await updatePrice.mutateAsync({ id: row.p9kId, data: payload });
+          } else {
+            await createPrice.mutateAsync(payload);
+          }
+        }
+      }
+      showStatus('All price configurations saved successfully!');
     } catch (err: unknown) {
       showStatus(String(err), 'error');
+    } finally {
+      setSavingPrices(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSubmit(e as any);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim() || !colorId) {
+      showStatus('Please specify Width Value', 'error');
+      return;
+    }
+
+    if (editingId) {
+      try {
+        await updateWidth.mutateAsync({ id: editingId, data: { value: inputValue, colorId } });
+        showStatus('Width dimension updated successfully!');
+        handleCancel();
+      } catch (err: unknown) {
+        showStatus(String(err), 'error');
+      }
+    } else {
+      const valuesToSubmit = inputValue.split(/[,\s]+/).map(part => part.trim()).filter(Boolean);
+      const existingWidthsForColor = widthsList
+        .filter((w) => w.width.colorId === colorId)
+        .map((w) => w.width.value.trim());
+
+      const uniqueValuesToSubmit = valuesToSubmit.filter(val => !existingWidthsForColor.includes(val));
+
+      if (uniqueValuesToSubmit.length === 0) {
+        alert('All specified widths already exist for this color variant.');
+        showStatus('Widths already exist', 'error');
+        return;
+      }
+
+      try {
+        showStatus(`Creating ${uniqueValuesToSubmit.length} width variant(s)...`, 'success');
+        for (const val of uniqueValuesToSubmit) {
+          await createWidth.mutateAsync({
+            value: val,
+            colorId,
+          });
+        }
+        showStatus('Width variant(s) created successfully!');
+        handleCancel();
+      } catch (err: unknown) {
+        showStatus(String(err), 'error');
+      }
     }
   };
 
   const handleEdit = (width: Width) => {
     if (!width.id) return;
     setEditingId(width.id);
-    setValue(width.value);
+    setInputValue(width.value);
     setColorId(width.colorId);
 
-    // Find parent model and collection for the selected colorId to pre-populate selection states
+    // Pre-populate dependent dropdown states
     let foundCollectionId = '';
     let foundModelId = '';
     collections.forEach((collection) => {
@@ -154,10 +331,7 @@ const AddWidths: React.FC = () => {
 
   const handleCancel = () => {
     setEditingId(null);
-    setValue('2.5');
-    setSelectedCollectionId('');
-    setSelectedModelId('');
-    setColorId('');
+    setInputValue('');
   };
 
   // Traverse all models -> colors to fetch color details and colors list
@@ -208,8 +382,30 @@ const AddWidths: React.FC = () => {
   });
 
 
+  const isAnyActionPending = 
+    createWidth.isPending || 
+    updateWidth.isPending || 
+    deleteWidth.isPending || 
+    deletePriceList.isPending || 
+    deleteTexture.isPending || 
+    deleteAsset3D.isPending || 
+    createPrice.isPending || 
+    updatePrice.isPending || 
+    savingPrices;
+
   return (
     <div>
+      {isAnyActionPending && (
+        <Loader 
+          message={
+            deleteWidth.isPending || deletePriceList.isPending || deleteTexture.isPending || deleteAsset3D.isPending
+              ? "Deleting variant..."
+              : savingPrices || createPrice.isPending || updatePrice.isPending
+              ? "Saving prices..."
+              : "Saving width..."
+          } 
+        />
+      )}
       <div className="dashboard-header">
         <h1 className="dashboard-title">Widths Management</h1>
         <p className="dashboard-subtitle">Define physical widths (in millimeters) associated with specific gold or metal color variants.</p>
@@ -233,10 +429,13 @@ const AddWidths: React.FC = () => {
 
       <div className="dashboard-grid">
         {/* Form Panel */}
-        <div className="card-panel">
-          <h2 className="card-title">{editingId ? 'Edit Width Option' : 'Create Width Option'}</h2>
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
+        {/* Form Panel */}
+        <div className="card-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+          {/* Section 1: Selection Dropdowns */}
+          <div>
+            <h2 className="card-title" style={{ marginBottom: '1.25rem' }}>Select Variant</h2>
+            
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
               <label className="form-label">Collection</label>
               <select
                 className="form-select"
@@ -257,7 +456,7 @@ const AddWidths: React.FC = () => {
               </select>
             </div>
 
-            <div className="form-group">
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
               <label className="form-label">Model</label>
               <select
                 className="form-select"
@@ -278,7 +477,7 @@ const AddWidths: React.FC = () => {
               </select>
             </div>
 
-            <div className="form-group">
+            <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Color Variant</label>
               <select
                 className="form-select"
@@ -295,34 +494,148 @@ const AddWidths: React.FC = () => {
                 ))}
               </select>
             </div>
+          </div>
 
-            <div className="form-group">
-              <label className="form-label">Width Value (mm)</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="e.g. 2, 2.5, 3, 4.5"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                required
-              />
+          {/* Section 2: Create Width Option */}
+          {colorId && (
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1.25rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 0.75rem 0' }}>
+                {editingId ? 'Edit Width Option' : 'Create Width Option'}
+              </h3>
+              <form onSubmit={handleSubmit}>
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Width Value (mm)</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. 2.5 (or comma separated, e.g. 2, 2.5, 3)"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    required
+                  />
+                </div>
+                <div className="btn-group" style={{ marginTop: '1rem' }}>
+                  {editingId && (
+                    <button type="button" className="btn btn-ghost" onClick={handleCancel}>
+                      Cancel
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={createWidth.isPending || updateWidth.isPending}
+                  >
+                    {editingId ? 'Save Changes' : 'Create Width(s)'}
+                  </button>
+                </div>
+              </form>
             </div>
+          )}
 
-            <div className="btn-group">
-              {editingId && (
-                <button type="button" className="btn btn-ghost" onClick={handleCancel}>
-                  Cancel
+          {/* Section 3: Price Matrix Configuration Table */}
+          {colorId && priceGrid.length > 0 && (
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Price Matrix Configuration</h3>
+                
+                {/* Carat selection tabs */}
+                <div style={{ display: 'flex', gap: '1rem', background: 'rgba(255,255,255,0.03)', padding: '0.25rem 0.75rem', borderRadius: '30px', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  {(['18K', '14K', '9K'] as const).map((c) => {
+                    const isActive = activeCaratTab === c;
+                    const label = c === '18K' ? '18 carat' : c === '14K' ? '14 carat' : '9 carat';
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setActiveCaratTab(c)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: isActive ? '#fff' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem',
+                          fontWeight: isActive ? '600' : 'normal',
+                          padding: '0.1rem 0',
+                          position: 'relative',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '2px'
+                        }}
+                      >
+                        {label}
+                        <span style={{ 
+                          width: '4px', 
+                          height: '4px', 
+                          borderRadius: '50%', 
+                          background: isActive ? 'var(--primary)' : 'transparent',
+                          transition: 'background-color 0.2s ease'
+                        }} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Table */}
+              <div style={{ overflowX: 'auto', marginBottom: '1.25rem' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', color: 'var(--text-primary)', fontSize: '0.8rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left' }}>
+                      <th style={{ padding: '0.4rem 0.25rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Width (mm)</th>
+                      <th style={{ padding: '0.4rem 0.25rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Size &lt;= 57 Price</th>
+                      <th style={{ padding: '0.4rem 0.25rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Size &gt; 57 Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {priceGrid.map((row) => {
+                      const smallerVal = activeCaratTab === '18K' ? row.p18kSmaller : activeCaratTab === '14K' ? row.p14kSmaller : row.p9kSmaller;
+                      const biggerVal = activeCaratTab === '18K' ? row.p18kBigger : activeCaratTab === '14K' ? row.p14kBigger : row.p9kBigger;
+
+                      return (
+                        <tr key={row.widthId} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                          <td style={{ padding: '0.4rem 0.25rem', fontWeight: 'bold' }}>{row.widthValue} mm</td>
+                          <td style={{ padding: '0.4rem 0.25rem' }}>
+                            <input
+                              type="text"
+                              className="form-input"
+                              placeholder="e.g. 1649"
+                              value={smallerVal}
+                              onChange={(e) => handleGridChange(row.widthId, 'smaller', activeCaratTab, e.target.value)}
+                              style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', borderRadius: '6px' }}
+                            />
+                          </td>
+                          <td style={{ padding: '0.4rem 0.25rem' }}>
+                            <input
+                              type="text"
+                              className="form-input"
+                              placeholder="e.g. 1885"
+                              value={biggerVal}
+                              onChange={(e) => handleGridChange(row.widthId, 'bigger', activeCaratTab, e.target.value)}
+                              style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', borderRadius: '6px' }}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleSavePrices}
+                  disabled={savingPrices}
+                  style={{ width: '100%' }}
+                >
+                  {savingPrices ? 'Saving Price Grid...' : 'Save Price Grid'}
                 </button>
-              )}
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={createWidth.isPending || updateWidth.isPending}
-              >
-                {editingId ? 'Save Changes' : 'Create Width'}
-              </button>
+              </div>
             </div>
-          </form>
+          )}
         </div>
 
         {/* List Panel */}
@@ -397,45 +710,103 @@ const AddWidths: React.FC = () => {
           </div>
 
           <div className="card-panel">
-            <h2 className="card-title">Existing Width Specifications</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <h2 className="card-title" style={{ margin: 0 }}>Existing Width Specifications</h2>
+              <div style={{ display: 'flex', gap: '1.5rem', background: 'rgba(255,255,255,0.03)', padding: '0.4rem 1.2rem', borderRadius: '30px', border: '1px solid rgba(255,255,255,0.07)' }}>
+                {(['18K', '14K', '9K'] as const).map((c) => {
+                  const isActive = activeCaratTab === c;
+                  const label = c === '18K' ? '18 carat' : c === '14K' ? '14 carat' : '9 carat';
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setActiveCaratTab(c)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: isActive ? '#fff' : 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        fontWeight: isActive ? '600' : 'normal',
+                        padding: '0.2rem 0',
+                        position: 'relative',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      {label}
+                      <span style={{ 
+                        width: '6px', 
+                        height: '6px', 
+                        borderRadius: '50%', 
+                        background: isActive ? 'var(--primary)' : 'transparent',
+                        transition: 'background-color 0.2s ease'
+                      }} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {filteredWidths.length === 0 ? (
               <div className="empty-state">No widths found. Add widths to your color variants.</div>
             ) : (
-              <div className="list-container">
-                {filteredWidths.map(({ width, colorName, hex, modelName }) => (
-                  <div key={width.id} className="list-item">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
-                      <div className="list-item-img" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', fontWeight: 'bold', color: '#10b981' }}>
-                        {width.value}
-                        <span style={{ fontSize: '0.65rem', fontWeight: 'normal', color: 'var(--text-secondary)' }}>mm</span>
-                      </div>
-                      <div>
-                        <h3 className="list-item-title">Width: {width.value} mm</h3>
-                        <p className="list-item-subtitle" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                          Color: {colorName}
-                          <span className="color-dot" style={{ backgroundColor: hex }}></span>
-                          • Model: {modelName}
-                        </p>
-                      </div>
-                    </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', color: 'var(--text-primary)', fontSize: '0.9rem', minWidth: '450px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left' }}>
+                      <th style={{ padding: '0.75rem 0.5rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Width (mm)</th>
+                      <th style={{ padding: '0.75rem 0.5rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Diamonds</th>
+                      <th style={{ padding: '0.75rem 0.5rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Size &lt;= 57</th>
+                      <th style={{ padding: '0.75rem 0.5rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Size &gt; 57</th>
+                      <th style={{ padding: '0.75rem 0.5rem', textAlign: 'right', fontWeight: 600, color: 'var(--text-secondary)' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredWidths.map(({ width, colorName, hex, modelName }) => {
+                      // Find the price list matching the active carat tab (case-insensitive)
+                      const priceList = width.priceLists?.find(p => p.carat.toUpperCase() === activeCaratTab.toUpperCase());
+                      const smallerPrice = priceList ? `€${priceList.smallerSizePrice}` : '—';
+                      const biggerPrice = priceList ? `€${priceList.biggerSizePrice}` : '—';
+                      const hasDiamonds = priceList?.isDiamonds ? '💎' : '—';
 
-                    <div className="list-item-actions">
-                      <button className="btn btn-ghost" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={() => handleEdit(width)}>
-                        Edit
-                      </button>
-                      {width.id && (
-                        <button
-                          className="btn btn-danger-outline"
-                          style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
-                          onClick={() => handleDelete(width.id!)}
-                          disabled={deleteWidth.isPending}
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                      return (
+                        <tr key={width.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          <td style={{ padding: '0.75rem 0.5rem' }}>
+                            <div style={{ fontWeight: '500', color: '#10b981' }}>{width.value} mm</div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                              {modelName} • {colorName} <span className="color-dot" style={{ backgroundColor: hex, display: 'inline-block', width: '8px', height: '8px', verticalAlign: 'middle', marginLeft: '2px' }}></span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '0.75rem 0.5rem', fontSize: '1rem' }}>{hasDiamonds}</td>
+                          <td style={{ padding: '0.75rem 0.5rem', fontWeight: '500' }}>{smallerPrice}</td>
+                          <td style={{ padding: '0.75rem 0.5rem', fontWeight: '500' }}>{biggerPrice}</td>
+                          <td style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                              <button 
+                                className="btn btn-ghost" 
+                                style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', height: 'auto', minHeight: 'unset' }} 
+                                onClick={() => handleEdit(width)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="btn btn-danger-outline"
+                                style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', height: 'auto', minHeight: 'unset' }}
+                                onClick={() => handleDelete(width.id!)}
+                                disabled={deleteWidth.isPending}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

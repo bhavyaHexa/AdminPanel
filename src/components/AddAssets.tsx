@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import useGetAllCollections from '../hooks/useGetAllCollections';
 import { useUploadAsset3DGlb } from '../hooks/useUploadAsset3DGlb';
+import Loader from './Loader';
 import usePostAssests from '../hooks/usePostAssests';
 import { useDeleteAsset3D } from '../hooks/useDeleteAsset3D';
+import usePostTextures from '../hooks/usePostTextures';
+import { useUpdateTexture } from '../hooks/useUpdateTexture';
 import type { Width, Asset3D } from '../types';
 
 const AddAssets: React.FC = () => {
@@ -11,6 +14,8 @@ const AddAssets: React.FC = () => {
   const uploadGlb = useUploadAsset3DGlb();
   const createAsset = usePostAssests();
   const deleteAsset = useDeleteAsset3D();
+  const createTexture = usePostTextures();
+  const updateTexture = useUpdateTexture();
 
   // Form State
   const [widthId, setWidthId] = useState('');
@@ -201,7 +206,41 @@ const AddAssets: React.FC = () => {
           model_url: selectedAssetUrl,
           version: version,
         });
-        showStatus('GLB asset URL linked successfully!');
+
+        // Copy textures from source width if they exist
+        if (details) {
+          const modelAssets = assetsList.filter(a => a.modelName === details.modelName);
+          if (modelAssets.length > 0) {
+            const sourceWidthId = modelAssets[0].widthId;
+            const sourceWidthDetails = widthsList.find(({ width }) => width.id === sourceWidthId);
+            const sourceWidthTexture = sourceWidthDetails?.width.texture;
+            
+            if (sourceWidthTexture) {
+              const targetWidthTexture = details.width.texture;
+              const texturePayload = {
+                aoGold: sourceWidthTexture.aoGold || undefined,
+                aoSilver: sourceWidthTexture.aoSilver || undefined,
+                aoEngrave: sourceWidthTexture.aoEngrave || undefined,
+                normalBase: sourceWidthTexture.normalBase || undefined,
+                normalFinishing: sourceWidthTexture.normalFinishing || undefined,
+              };
+              
+              if (targetWidthTexture && targetWidthTexture.id) {
+                await updateTexture.mutateAsync({
+                  id: targetWidthTexture.id,
+                  data: texturePayload
+                });
+              } else {
+                await createTexture.mutateAsync({
+                  widthId,
+                  ...texturePayload
+                });
+              }
+            }
+          }
+        }
+
+        showStatus('GLB asset and textures linked successfully!');
         // Reset form
         setWidthId('');
         setSelectedCollectionId('');
@@ -218,8 +257,26 @@ const AddAssets: React.FC = () => {
     }
   };
 
+  const isAnyActionPending = 
+    uploadGlb.isPending || 
+    createAsset.isPending || 
+    deleteAsset.isPending ||
+    createTexture.isPending ||
+    updateTexture.isPending;
+
   return (
     <div>
+      {isAnyActionPending && (
+        <Loader 
+          message={
+            deleteAsset.isPending
+              ? "Deleting 3D asset..."
+              : uploadGlb.isPending
+              ? "Uploading GLB model file (this may take a few moments)..."
+              : "Saving asset configuration..."
+          }
+        />
+      )}
       <div className="dashboard-header">
         <h1 className="dashboard-title">3D Assets Management</h1>
         <p className="dashboard-subtitle">Upload 3D mesh GLB geometries for customizable widths.</p>

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import useGetAllCollections from "../hooks/useGetAllCollections";
 import useGetAllModels from "../hooks/useGetAllModels";
+import Loader from "./Loader";
 import usePostModel from "../hooks/usePostModel";
 import { useUpdateModel } from "../hooks/useUpdateModel";
 import { useDeleteModel } from "../hooks/useDeleteModel";
@@ -247,8 +248,27 @@ const AddModels: React.FC = () => {
     setPreviewPreviewUrl("");
   };
 
+  const isAnyActionPending = 
+    isLoading ||
+    createModel.isPending || 
+    updateModel.isPending || 
+    deleteModel.isPending || 
+    uploadImage.isPending || 
+    uploadPreview.isPending;
+
   return (
     <div>
+      {isAnyActionPending && (
+        <Loader 
+          message={
+            deleteModel.isPending
+              ? "Deleting model..."
+              : uploadImage.isPending || uploadPreview.isPending
+              ? "Uploading graphics..."
+              : "Saving model..."
+          }
+        />
+      )}
       <div className="dashboard-header">
         <h1 className="dashboard-title">Models Management</h1>
         <p className="dashboard-subtitle">

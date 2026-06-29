@@ -4,7 +4,6 @@ import AddCollection from './components/AddCollection';
 import AddModels from './components/AddModels';
 import AddColors from './components/AddColors';
 import AddWidths from './components/AddWidths';
-import AddPrice from './components/AddPrice';
 import AddAssets from './components/AddAssets';
 import AddTextures from './components/AddTextures';
 import LoginPage from './components/LoginPage';
@@ -25,8 +24,6 @@ function App() {
         return <AddColors />;
       case 'widths':
         return <AddWidths />;
-      case 'prices':
-        return <AddPrice />;
       case 'assets':
         return <AddAssets />;
       case 'textures':
