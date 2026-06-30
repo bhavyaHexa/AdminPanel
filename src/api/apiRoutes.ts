@@ -44,8 +44,8 @@ export const API_ROUTES = {
   UPLOAD_TEXTURE_AO_ENGRAVE: (id: string) => `/textures/${id}/upload/ao-engrave`,
   UPLOAD_TEXTURE_NORMAL_BASE: (id: string) => `/textures/${id}/upload/normal-base`,
   UPLOAD_TEXTURE_NORMAL_FINISHING: (id: string) => `/textures/${id}/upload/normal-finishing`,
-  UPLOAD_TEXTURE_AO_NO_DIAMOND: (id: string) => `/textures/${id}/upload/ao-nodiamond`,
-  UPLOAD_TEXTURE_AO_NO_DIAMOND_SILVER: (id: string) => `/textures/${id}/upload/ao-nodiamond-silver`,
+  UPLOAD_TEXTURE_NO_DIAMOND_BASE: (id: string) => `/textures/${id}/upload/no-diamond-base`,
+  UPLOAD_TEXTURE_NO_DIAMOND_FINISHING: (id: string) => `/textures/${id}/upload/no-diamond-finishing`,
 
   // Auth Endpoints
   SIGNUP: '/auth/signup',

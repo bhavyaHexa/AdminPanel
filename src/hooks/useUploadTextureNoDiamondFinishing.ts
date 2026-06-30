@@ -4,13 +4,13 @@ import { API_ROUTES } from '../api/apiRoutes';
 import useAxios from '../api/useAxios';
 import { QUERY_KEYS } from '../common/queryKeys';
 
-export const useUploadTextureAoNoDiamond = () => {
+export const useUploadTextureNoDiamondFinishing = () => {
   const { postData } = useAxios();
   const queryClient = useQueryClient();
 
   return useMutation<unknown, Error, { id: string; formData: FormData }>({
     mutationFn: ({ id, formData }) =>
-      postData(API_ROUTES.UPLOAD_TEXTURE_AO_NO_DIAMOND(id), formData),
+      postData(API_ROUTES.UPLOAD_TEXTURE_NO_DIAMOND_FINISHING(id), formData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.ALL_TEXTURES] });
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.ALL_WIDTHS] });

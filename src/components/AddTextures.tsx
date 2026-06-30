@@ -7,8 +7,8 @@ import { useUploadTextureAoSilver } from '../hooks/useUploadTextureAoSilver';
 import { useUploadTextureAoEngrave } from '../hooks/useUploadTextureAoEngrave';
 import { useUploadTextureNormalBase } from '../hooks/useUploadTextureNormalBase';
 import { useUploadTextureNormalFinishing } from '../hooks/useUploadTextureNormalFinishing';
-import { useUploadTextureAoNoDiamond } from '../hooks/useUploadTextureAoNoDiamond';
-import { useUploadTextureAoNoDiamondSilver } from '../hooks/useUploadTextureAoNoDiamondSilver';
+import { useUploadTextureNoDiamondBase } from '../hooks/useUploadTextureNoDiamondBase';
+import { useUploadTextureNoDiamondFinishing } from '../hooks/useUploadTextureNoDiamondFinishing';
 import { useDeleteTexture } from '../hooks/useDeleteTexture';
 import { useUpdateTexture } from '../hooks/useUpdateTexture';
 import type { Texture } from '../types';
@@ -24,8 +24,8 @@ const AddTextures: React.FC = () => {
   const uploadEngrave = useUploadTextureAoEngrave();
   const uploadNormalBase = useUploadTextureNormalBase();
   const uploadNormalFinishing = useUploadTextureNormalFinishing();
-  const uploadAoNoDiamond = useUploadTextureAoNoDiamond();
-  const uploadAoNoDiamondSilver = useUploadTextureAoNoDiamondSilver();
+  const uploadNoDiamondBase = useUploadTextureNoDiamondBase();
+  const uploadNoDiamondFinishing = useUploadTextureNoDiamondFinishing();
 
   // Form State
   const [selectedCollectionId, setSelectedCollectionId] = useState('');
@@ -44,7 +44,7 @@ const AddTextures: React.FC = () => {
     setTimeout(() => setStatusMsg(null), 4000);
   };
 
-  const handleUploadClick = async (file: File, type: 'gold' | 'silver' | 'engrave' | 'normalBase' | 'normalFinishing' | 'aoNoDiamond' | 'aoNoDiamondSilver') => {
+  const handleUploadClick = async (file: File, type: 'gold' | 'silver' | 'engrave' | 'normalBase' | 'normalFinishing' | 'noDiamondBase' | 'noDiamondFinishing') => {
     if (!widthId) return;
     try {
       let textureId = currentTexture?.id;
@@ -117,7 +117,7 @@ const AddTextures: React.FC = () => {
     }
   };
 
-  const handleMapUpload = async (textureId: string, file: File, type: 'gold' | 'silver' | 'engrave' | 'normalBase' | 'normalFinishing' | 'aoNoDiamond' | 'aoNoDiamondSilver') => {
+  const handleMapUpload = async (textureId: string, file: File, type: 'gold' | 'silver' | 'engrave' | 'normalBase' | 'normalFinishing' | 'noDiamondBase' | 'noDiamondFinishing') => {
     const formData = new FormData();
     formData.append('file', file);
 
@@ -137,12 +137,12 @@ const AddTextures: React.FC = () => {
       } else if (type === 'normalFinishing') {
         await uploadNormalFinishing.mutateAsync({ id: textureId, formData });
         showStatus('Normal Finishing map uploaded successfully!');
-      } else if (type === 'aoNoDiamond') {
-        await uploadAoNoDiamond.mutateAsync({ id: textureId, formData });
-        showStatus('Base Metal NoDiamondAO map uploaded successfully!');
-      } else if (type === 'aoNoDiamondSilver') {
-        await uploadAoNoDiamondSilver.mutateAsync({ id: textureId, formData });
-        showStatus('Finishing Metal NODiamondAO map uploaded successfully!');
+      } else if (type === 'noDiamondBase') {
+        await uploadNoDiamondBase.mutateAsync({ id: textureId, formData });
+        showStatus('Base Metal NoDiamond map uploaded successfully!');
+      } else if (type === 'noDiamondFinishing') {
+        await uploadNoDiamondFinishing.mutateAsync({ id: textureId, formData });
+        showStatus('Finishing Metal NoDiamond map uploaded successfully!');
       }
     } catch (err: unknown) {
       showStatus(`Texture upload failed: ${String(err)}`, 'error');
@@ -247,8 +247,8 @@ const AddTextures: React.FC = () => {
     uploadEngrave.isPending || 
     uploadNormalBase.isPending || 
     uploadNormalFinishing.isPending ||
-    uploadAoNoDiamond.isPending ||
-    uploadAoNoDiamondSilver.isPending;
+    uploadNoDiamondBase.isPending ||
+    uploadNoDiamondFinishing.isPending;
 
   return (
     <div>
@@ -257,7 +257,7 @@ const AddTextures: React.FC = () => {
           message={
             deleteTexture.isPending
               ? "Deleting texture configuration..."
-              : uploadGold.isPending || uploadSilver.isPending || uploadEngrave.isPending || uploadNormalBase.isPending || uploadNormalFinishing.isPending || uploadAoNoDiamond.isPending || uploadAoNoDiamondSilver.isPending
+              : uploadGold.isPending || uploadSilver.isPending || uploadEngrave.isPending || uploadNormalBase.isPending || uploadNormalFinishing.isPending || uploadNoDiamondBase.isPending || uploadNoDiamondFinishing.isPending
               ? "Uploading texture map..."
               : "Saving texture configuration..."
           }
@@ -569,10 +569,10 @@ const AddTextures: React.FC = () => {
 
                     {formModel?.isDiamonds && (
                       <>
-                        {/* Base Metal NoDiamondAO */}
+                        {/* Base Metal NoDiamond */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
-                          <span style={{ fontSize: '0.85rem', color: currentTexture?.aoNoDiamond ? '#10b981' : 'var(--text-secondary)' }}>
-                            {currentTexture?.aoNoDiamond ? '✓ Base Metal NoDiamondAO Map Loaded' : '✗ Base Metal NoDiamondAO Map Missing'}
+                          <span style={{ fontSize: '0.85rem', color: currentTexture?.noDiamondBase ? '#10b981' : 'var(--text-secondary)' }}>
+                            {currentTexture?.noDiamondBase ? '✓ Base Metal NoDiamond Map Loaded' : '✗ Base Metal NoDiamond Map Missing'}
                           </span>
                           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                             <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
@@ -583,16 +583,16 @@ const AddTextures: React.FC = () => {
                                 className="file-upload-input"
                                 onChange={(e) => {
                                   const file = e.target.files?.[0];
-                                  if (file) handleUploadClick(file, 'aoNoDiamond');
+                                  if (file) handleUploadClick(file, 'noDiamondBase');
                                 }}
                               />
                             </div>
-                            {currentTexture?.aoNoDiamond && currentTexture.id && (
+                            {currentTexture?.noDiamondBase && currentTexture.id && (
                               <button
                                 type="button"
                                 className="btn btn-danger-outline"
                                 style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem' }}
-                                onClick={() => handleMapDelete(currentTexture.id!, 'aoNoDiamond')}
+                                onClick={() => handleMapDelete(currentTexture.id!, 'noDiamondBase')}
                                 disabled={updateTexture.isPending}
                               >
                                 Delete
@@ -601,10 +601,10 @@ const AddTextures: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Finishing Metal NODiamondAO */}
+                        {/* Finishing Metal NoDiamond */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
-                          <span style={{ fontSize: '0.85rem', color: currentTexture?.aoNoDiamondSilver ? '#10b981' : 'var(--text-secondary)' }}>
-                            {currentTexture?.aoNoDiamondSilver ? '✓ Finishing Metal NODiamondAO Map Loaded' : '✗ Finishing Metal NODiamondAO Map Missing'}
+                          <span style={{ fontSize: '0.85rem', color: currentTexture?.noDiamondFinishing ? '#10b981' : 'var(--text-secondary)' }}>
+                            {currentTexture?.noDiamondFinishing ? '✓ Finishing Metal NoDiamond Map Loaded' : '✗ Finishing Metal NoDiamond Map Missing'}
                           </span>
                           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                             <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
@@ -615,16 +615,16 @@ const AddTextures: React.FC = () => {
                                 className="file-upload-input"
                                 onChange={(e) => {
                                   const file = e.target.files?.[0];
-                                  if (file) handleUploadClick(file, 'aoNoDiamondSilver');
+                                  if (file) handleUploadClick(file, 'noDiamondFinishing');
                                 }}
                               />
                             </div>
-                            {currentTexture?.aoNoDiamondSilver && currentTexture.id && (
+                            {currentTexture?.noDiamondFinishing && currentTexture.id && (
                               <button
                                 type="button"
                                 className="btn btn-danger-outline"
                                 style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem' }}
-                                onClick={() => handleMapDelete(currentTexture.id!, 'aoNoDiamondSilver')}
+                                onClick={() => handleMapDelete(currentTexture.id!, 'noDiamondFinishing')}
                                 disabled={updateTexture.isPending}
                               >
                                 Delete
@@ -848,13 +848,13 @@ const AddTextures: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Conditional NoDiamondAO Maps */}
+                    {/* Conditional NoDiamond Maps */}
                     {isDiamonds && (
                       <>
-                        {/* Base Metal NoDiamondAO */}
+                        {/* Base Metal NoDiamond */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '0.8rem', color: texture.aoNoDiamond ? '#10b981' : 'var(--text-secondary)' }}>
-                            {texture.aoNoDiamond ? '✓ Base Metal NoDiamondAO Map Loaded' : '✗ Base Metal NoDiamondAO Map Missing'}
+                          <span style={{ fontSize: '0.8rem', color: texture.noDiamondBase ? '#10b981' : 'var(--text-secondary)' }}>
+                            {texture.noDiamondBase ? '✓ Base Metal NoDiamond Map Loaded' : '✗ Base Metal NoDiamond Map Missing'}
                           </span>
                           <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
                             <span style={{ fontSize: '0.75rem' }}>Upload</span>
@@ -864,16 +864,16 @@ const AddTextures: React.FC = () => {
                               className="file-upload-input"
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
-                                if (file && texture.id) handleMapUpload(texture.id, file, 'aoNoDiamond');
+                                if (file && texture.id) handleMapUpload(texture.id, file, 'noDiamondBase');
                               }}
                             />
                           </div>
                         </div>
 
-                        {/* Finishing Metal NODiamondAO */}
+                        {/* Finishing Metal NoDiamond */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '0.8rem', color: texture.aoNoDiamondSilver ? '#10b981' : 'var(--text-secondary)' }}>
-                            {texture.aoNoDiamondSilver ? '✓ Finishing Metal NODiamondAO Map Loaded' : '✗ Finishing Metal NODiamondAO Map Missing'}
+                          <span style={{ fontSize: '0.8rem', color: texture.noDiamondFinishing ? '#10b981' : 'var(--text-secondary)' }}>
+                            {texture.noDiamondFinishing ? '✓ Finishing Metal NoDiamond Map Loaded' : '✗ Finishing Metal NoDiamond Map Missing'}
                           </span>
                           <div className="file-upload-zone" style={{ margin: 0, padding: '0.2rem 0.5rem', minHeight: 'auto', display: 'inline-block' }}>
                             <span style={{ fontSize: '0.75rem' }}>Upload</span>
@@ -883,7 +883,7 @@ const AddTextures: React.FC = () => {
                               className="file-upload-input"
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
-                                if (file && texture.id) handleMapUpload(texture.id, file, 'aoNoDiamondSilver');
+                                if (file && texture.id) handleMapUpload(texture.id, file, 'noDiamondFinishing');
                               }}
                             />
                           </div>

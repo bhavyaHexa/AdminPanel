@@ -54,8 +54,25 @@ const AddAssets: React.FC = () => {
   };
 
   // Flatten options for selection and listing
-  const widthsList: { width: Width; colorName: string; modelName: string; collectionName: string }[] = [];
-  const assetsList: { asset: Asset3D; widthValue: string; colorName: string; modelName: string; widthId: string }[] = [];
+  const widthsList: {
+    width: Width;
+    colorName: string;
+    modelName: string;
+    collectionName: string;
+    collectionId: string;
+    modelId: string;
+    colorId: string;
+  }[] = [];
+  const assetsList: {
+    asset: Asset3D;
+    widthValue: string;
+    colorName: string;
+    modelName: string;
+    widthId: string;
+    collectionId: string;
+    modelId: string;
+    colorId: string;
+  }[] = [];
 
   collections.forEach((collection) => {
     if (collection.models && Array.isArray(collection.models)) {
@@ -244,8 +261,8 @@ const AddAssets: React.FC = () => {
                 aoEngrave: sourceWidthTexture.aoEngrave || undefined,
                 normalBase: sourceWidthTexture.normalBase || undefined,
                 normalFinishing: sourceWidthTexture.normalFinishing || undefined,
-                aoNoDiamond: sourceWidthTexture.aoNoDiamond || undefined,
-                aoNoDiamondSilver: sourceWidthTexture.aoNoDiamondSilver || undefined,
+                noDiamondBase: sourceWidthTexture.noDiamondBase || undefined,
+                noDiamondFinishing: sourceWidthTexture.noDiamondFinishing || undefined,
               };
 
               if (targetWidthTexture && targetWidthTexture.id) {
