@@ -21,6 +21,8 @@ export interface Texture {
   aoEngrave?: string;
   normalBase?: string;
   normalFinishing?: string;
+  aoNoDiamond?: string;
+  aoNoDiamondSilver?: string;
   widthId: string;
 }
 

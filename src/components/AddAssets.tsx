@@ -223,8 +223,10 @@ const AddAssets: React.FC = () => {
                 aoEngrave: sourceWidthTexture.aoEngrave || undefined,
                 normalBase: sourceWidthTexture.normalBase || undefined,
                 normalFinishing: sourceWidthTexture.normalFinishing || undefined,
+                aoNoDiamond: sourceWidthTexture.aoNoDiamond || undefined,
+                aoNoDiamondSilver: sourceWidthTexture.aoNoDiamondSilver || undefined,
               };
-              
+
               if (targetWidthTexture && targetWidthTexture.id) {
                 await updateTexture.mutateAsync({
                   id: targetWidthTexture.id,
