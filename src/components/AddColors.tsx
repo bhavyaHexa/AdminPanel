@@ -30,6 +30,7 @@ const AddColors: React.FC = () => {
   const [name, setName] = useState('Yellow Gold');
   const [hex, setHex] = useState('#ffc35c');
   const [sku, setSku] = useState('');
+  const [filterCollectionId, setFilterCollectionId] = useState('');
   const [filterModelId, setFilterModelId] = useState('');
   const [swatchFile, setSwatchFile] = useState<File | null>(null);
   const [swatchPreviewUrl, setSwatchPreviewUrl] = useState('');
@@ -64,12 +65,19 @@ const AddColors: React.FC = () => {
     loadPredefinedSwatch(name);
   }, [name, editingId]);
 
+  const filteredCollection = collections.find((c) => c.id === filterCollectionId);
+  const filterModelOptions = filteredCollection?.models || [];
+
   // Sync filter when parent model is selected in the form
   React.useEffect(() => {
     if (modelId) {
       setFilterModelId(modelId);
+      const parentCollection = collections.find((c) => c.models?.some((m) => m.id === modelId));
+      if (parentCollection) {
+        setFilterCollectionId(parentCollection.id || '');
+      }
     }
-  }, [modelId]);
+  }, [modelId, collections]);
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const showStatus = (text: string, type: 'success' | 'error' = 'success') => {
@@ -199,7 +207,10 @@ const AddColors: React.FC = () => {
         if (model.colors && Array.isArray(model.colors)) {
           model.colors.forEach((color) => {
             if (!colorsList.some((c) => c.id === color.id)) {
-              if (!filterModelId || color.modelId === filterModelId) {
+              if (
+                (!filterCollectionId || collection.id === filterCollectionId) &&
+                (!filterModelId || color.modelId === filterModelId)
+              ) {
                 colorsList.push(color);
               }
             }
@@ -387,24 +398,41 @@ const AddColors: React.FC = () => {
 
         {/* List Panel */}
         <div className="card-panel">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem' }}>
             <h2 className="card-title" style={{ margin: 0 }}>Existing Color Variants</h2>
-            <select
-              className="form-select"
-              style={{ width: 'auto', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
-              value={filterModelId}
-              onChange={(e) => setFilterModelId(e.target.value)}
-            >
-              <option value="">All Models</option>
-              {models.map((m) => {
-                const collName = collections.find((c) => c.id === m.collectionId)?.name || 'Unknown Collection';
-                return (
-                  <option key={m.id} value={m.id}>
-                    {m.name} ({collName})
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <select
+                className="form-select"
+                style={{ width: 'auto', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                value={filterCollectionId}
+                onChange={(e) => {
+                  setFilterCollectionId(e.target.value);
+                  setFilterModelId('');
+                }}
+              >
+                <option value="">All Collections</option>
+                {collections.map((collection) => (
+                  <option key={collection.id} value={collection.id}>
+                    {collection.name}
                   </option>
-                );
-              })}
-            </select>
+                ))}
+              </select>
+
+              <select
+                className="form-select"
+                style={{ width: 'auto', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                value={filterModelId}
+                onChange={(e) => setFilterModelId(e.target.value)}
+                disabled={!filterCollectionId}
+              >
+                <option value="">All Models</option>
+                {filterModelOptions.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           {colorsList.length === 0 ? (
             <div className="empty-state">No color variants found. Add colors to your models.</div>

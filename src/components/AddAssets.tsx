@@ -28,6 +28,10 @@ const AddAssets: React.FC = () => {
   const [selectedColorId, setSelectedColorId] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  const [filterCollectionId, setFilterCollectionId] = useState('');
+  const [filterModelId, setFilterModelId] = useState('');
+  const [filterColorId, setFilterColorId] = useState('');
+
   // Options for dependent dropdowns
   const collectionOptions = collections;
   const selectedCollection = collections.find(c => c.id === selectedCollectionId);
@@ -36,6 +40,11 @@ const AddAssets: React.FC = () => {
   const colorOptions = selectedModel?.colors || [];
   const selectedColor = colorOptions.find(c => c.id === selectedColorId);
   const widthOptions = selectedColor?.widths || [];
+
+  const filterSelectedCollection = collections.find(c => c.id === filterCollectionId);
+  const filterModelOptions = filterSelectedCollection?.models || [];
+  const filterSelectedModel = filterModelOptions.find(m => m.id === filterModelId);
+  const filterColorOptions = filterSelectedModel?.colors || [];
 
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -60,6 +69,9 @@ const AddAssets: React.FC = () => {
                   colorName: color.name,
                   modelName: model.name,
                   collectionName: collection.name,
+                  collectionId: collection.id || '',
+                  modelId: model.id || '',
+                  colorId: color.id || '',
                 });
                 if (width.asset3D) {
                   assetsList.push({
@@ -68,6 +80,9 @@ const AddAssets: React.FC = () => {
                     colorName: color.name,
                     modelName: model.name,
                     widthId: width.id || '',
+                    collectionId: collection.id || '',
+                    modelId: model.id || '',
+                    colorId: color.id || '',
                   });
                 }
               });
@@ -77,6 +92,12 @@ const AddAssets: React.FC = () => {
       });
     }
   });
+
+  const filteredAssets = assetsList.filter((assetItem) =>
+    (!filterCollectionId || assetItem.collectionId === filterCollectionId) &&
+    (!filterModelId || assetItem.modelId === filterModelId) &&
+    (!filterColorId || assetItem.colorId === filterColorId)
+  );
 
   const modelsWithAssets = Array.from(new Set(assetsList.map((a) => a.modelName)));
 
@@ -593,11 +614,70 @@ const AddAssets: React.FC = () => {
         {/* List Panel */}
         <div className="card-panel">
           <h2 className="card-title">Configured 3D Meshes</h2>
-          {assetsList.length === 0 ? (
-            <div className="empty-state">No 3D assets uploaded yet. Upload a GLB for your widths.</div>
+          <div className="filter-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Filter by Collection</label>
+              <select
+                className="form-select"
+                value={filterCollectionId}
+                onChange={(e) => {
+                  setFilterCollectionId(e.target.value);
+                  setFilterModelId('');
+                  setFilterColorId('');
+                }}
+              >
+                <option value="">-- All Collections --</option>
+                {collectionOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Filter by Model</label>
+              <select
+                className="form-select"
+                value={filterModelId}
+                onChange={(e) => {
+                  setFilterModelId(e.target.value);
+                  setFilterColorId('');
+                }}
+                disabled={!filterCollectionId}
+              >
+                <option value="">-- All Models --</option>
+                {filterModelOptions.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Filter by Color</label>
+              <select
+                className="form-select"
+                value={filterColorId}
+                onChange={(e) => setFilterColorId(e.target.value)}
+                disabled={!filterModelId}
+              >
+                <option value="">-- All Colors --</option>
+                {filterColorOptions.map((color) => (
+                  <option key={color.id} value={color.id}>
+                    {color.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {filteredAssets.length === 0 ? (
+            <div className="empty-state">No matching 3D assets found for selected filter.</div>
           ) : (
             <div className="list-container">
-              {assetsList.map(({ asset, widthValue, colorName, modelName, widthId: assetWidthId }) => (
+              {filteredAssets.map(({ asset, widthValue, colorName, modelName, widthId: assetWidthId }) => (
                 <div key={asset.id} className="list-item">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
                     <div className="list-item-img" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', fontSize: '1.5rem' }}>
